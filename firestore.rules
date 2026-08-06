@@ -1,0 +1,85 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions for user authentication & role verification
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function isStudent() {
+      return isSignedIn() && (getUserData().role == 'STUDENT' || getUserData().role == 'student');
+    }
+
+    function isStaff() {
+      return isSignedIn() && (getUserData().role == 'STAFF' || getUserData().role == 'STAFF_GUIDE' || getUserData().role == 'staff');
+    }
+
+    function isHOD() {
+      return isSignedIn() && (getUserData().role == 'HOD' || getUserData().role == 'hod');
+    }
+
+    // Collection: users
+    match /users/{userId} {
+      allow read: if isSignedIn();
+      allow create, update: if isSignedIn() && (request.auth.uid == userId || isHOD());
+      allow delete: if isHOD();
+    }
+
+    // Collection: case_histories
+    match /case_histories/{caseId} {
+      // READ: Students can read their own cases; Staff & HOD can read cases in their scope
+      allow read: if isSignedIn() && (
+        isHOD() ||
+        isStaff() ||
+        (isStudent() && resource.data.studentOwnerId == request.auth.uid)
+      );
+
+      // CREATE: Students can create new cases in DRAFT or PENDING_STAFF status
+      allow create: if isStudent() && (
+        request.resource.data.approvalStatus in ['DRAFT', 'PENDING_STAFF', 'Draft', 'Pending Staff Approval']
+      );
+
+      // UPDATE Rules based on Workflow Status
+      allow update: if isSignedIn() && (
+        // 1. Lock all records from editing once status is APPROVED / HOD Approved
+        resource.data.approvalStatus != 'APPROVED' &&
+        resource.data.approvalStatus != 'HOD Approved' && (
+
+          // 2. Student Edit Rule: Only when status is DRAFT or REVISION_REQUESTED / Returned for Corrections
+          (
+            isStudent() &&
+            resource.data.studentOwnerId == request.auth.uid &&
+            resource.data.approvalStatus in ['DRAFT', 'REVISION_REQUESTED', 'Draft', 'Returned for Corrections'] &&
+            request.resource.data.approvalStatus in ['DRAFT', 'PENDING_STAFF', 'Draft', 'Pending Staff Approval']
+          ) ||
+
+          // 3. Staff Review Rule: Staff can update status to PENDING_HOD or REVISION_REQUESTED
+          (
+            isStaff() &&
+            request.resource.data.approvalStatus in [
+              'PENDING_HOD', 'REVISION_REQUESTED',
+              'Pending HOD Approval', 'Returned for Corrections'
+            ]
+          ) ||
+
+          // 4. HOD Executive Approval Rule: HOD can update status to APPROVED or REVISION_REQUESTED
+          (
+            isHOD() &&
+            request.resource.data.approvalStatus in [
+              'APPROVED', 'REVISION_REQUESTED',
+              'HOD Approved', 'Returned for Corrections'
+            ]
+          )
+        )
+      );
+
+      // DELETE: Only HOD can delete cases if needed
+      allow delete: if isHOD();
+    }
+  }
+}

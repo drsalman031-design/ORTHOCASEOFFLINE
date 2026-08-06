@@ -1,0 +1,395 @@
+@import "tailwindcss";
+
+@theme {
+  --text-xs: 0.75rem; /* 12px - nav labels, chips, badges */
+  --text-xs--line-height: 1rem;
+  --text-meta: 0.8125rem; /* 13px - meta, helper text, subtitles */
+  --text-meta--line-height: 1.125rem;
+  --text-sm: 0.875rem; /* 14px - secondary labels & buttons */
+  --text-sm--line-height: 1.25rem;
+  --text-base: 0.9375rem; /* 15px - primary body text, names, values */
+  --text-base--line-height: 1.375rem;
+  --text-lg: 1.125rem; /* 18px - section titles */
+  --text-lg--line-height: 1.5rem;
+  --text-xl: 1.25rem; /* 20px - page title, welcome headings */
+  --text-xl--line-height: 1.75rem;
+}
+
+:root {
+  --app-max-width: 430px;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+  --header-h: 2.25rem;
+  --nav-h: 3.125rem;
+  --form-chrome-h: 2.375rem;
+  --form-footer-h: 2.25rem;
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+
+  --text-title: 1.125rem;   /* 18px */
+  --text-body: 0.9375rem;   /* 15px */
+  --text-meta: 0.8125rem;   /* 13px */
+  --text-caption: 0.75rem;  /* 12px */
+  --text-micro: 0.6875rem;  /* 11px */
+
+  --app-height: 100dvh;
+  color-scheme: light;
+  --bg-primary: #f1f5f9;
+  --bg-card: #ffffff;
+  --bg-surface: #f8fafc;
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #94a3b8;
+  --border-color: #e2e8f0;
+  --accent: #0d9488;
+  --accent-light: #ccfbf1;
+  --danger: #dc2626;
+  --danger-light: #fee2e2;
+  --warning: #d97706;
+  --warning-light: #fef3c7;
+  --success: #16a34a;
+  --success-light: #dcfce7;
+}
+
+@supports not (height: 100dvh) {
+  :root {
+    --app-height: 100vh;
+  }
+}
+
+.text-meta {
+  font-size: 13px;
+  line-height: 1.25rem;
+}
+
+.text-micro {
+  font-size: 11px;
+  line-height: 0.875rem;
+}
+
+[data-theme="dark"] {
+  --bg-primary: #0f172a;
+  --bg-card: #1e293b;
+  --bg-surface: #020617;
+  --text-primary: #f1f5f9;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+  --border-color: #334155;
+  --accent: #2dd4bf;
+  --accent-light: #042f2e;
+  --danger: #f87171;
+  --danger-light: #450a0a;
+  --warning: #fbbf24;
+  --warning-light: #451a03;
+  --success: #4ade80;
+  --success-light: #052e16;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  overscroll-behavior: none;
+  background: var(--bg-surface);
+  color: var(--text-primary);
+}
+
+[data-theme="dark"] {
+  color-scheme: dark;
+}
+
+/* Phone app shell - 100% width on mobile devices, responsive fit */
+.app-shell {
+  width: 100%;
+  max-width: 100%;
+  height: var(--app-height);
+  margin-inline: auto;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-primary);
+  position: relative;
+  overflow: hidden;
+  contain: layout paint;
+  transform: translateZ(0);
+  padding-left: var(--safe-left);
+  padding-right: var(--safe-right);
+}
+
+@media (min-width: 640px) and (display-mode: browser) {
+  .app-frame {
+    min-height: var(--app-height);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1.25rem;
+    background:
+      radial-gradient(ellipse at 20% 10%, rgba(45, 212, 191, 0.12), transparent 45%),
+      radial-gradient(ellipse at 80% 90%, rgba(15, 23, 42, 0.9), transparent 50%),
+      #020617;
+  }
+
+  .app-shell {
+    max-width: var(--app-max-width);
+    height: min(844px, calc(var(--app-height) - 2.5rem));
+    border-radius: 2rem;
+    border: 1px solid rgb(51 65 85);
+    box-shadow:
+      0 0 0 1px rgb(15 23 42),
+      0 25px 50px -12px rgb(0 0 0 / 0.55);
+  }
+}
+
+.app-header {
+  padding-top: max(0.35rem, var(--safe-top));
+}
+
+.app-header--compact .app-header-sub {
+  display: none;
+}
+
+.app-header--compact .app-header-row {
+  padding-top: 0.4rem;
+  padding-bottom: 0.4rem;
+}
+
+.app-main {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+  padding-bottom: calc(var(--nav-h) + var(--safe-bottom) + 0.75rem);
+  scrollbar-width: none;
+  position: relative;
+}
+
+.app-main--form {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 0;
+  padding-bottom: 0;
+}
+
+.app-main--form > * {
+  flex: 1;
+  min-height: 0;
+}
+
+/* Case form: chrome fixed, body scrolls with end-of-page footer */
+.case-form-shell {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+  background: var(--bg-primary);
+}
+
+.case-form-chrome {
+  flex-shrink: 0;
+  z-index: 25;
+  background: var(--bg-card);
+  border-bottom: 1px solid var(--border-color);
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
+}
+
+.case-form-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+  padding: 0.75rem;
+  padding-bottom: 1rem;
+  scrollbar-width: none;
+}
+
+.case-form-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+/* Legacy quick-select chips (removed from TabIntraoral; hide if old bundle is cached) */
+.case-form-scroll div.flex.flex-wrap.gap-1.pt-0\.5 {
+  display: none !important;
+}
+
+.case-form-footer {
+  flex-shrink: 0;
+  z-index: 25;
+  padding: 0.625rem 0.875rem;
+  background: var(--bg-card);
+  border-top: 1px solid var(--border-color);
+  box-shadow: 0 -4px 12px rgba(15, 23, 42, 0.06);
+}
+
+.app-main--faculty {
+  padding-bottom: calc(4rem + var(--safe-bottom));
+}
+
+.app-main::-webkit-scrollbar {
+  display: none;
+}
+
+.tab-scroll-fade {
+  position: relative;
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+}
+
+.tab-strip-scroll {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  width: 100%;
+  min-height: 2.25rem;
+  padding: 0.125rem 0.125rem;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+  touch-action: pan-x;
+  scroll-snap-type: x proximity;
+  scroll-behavior: smooth;
+  scrollbar-width: none;
+}
+
+.tab-strip-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.tab-strip-scroll > .tab-strip-track {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  width: max-content;
+  min-width: 100%;
+  padding-inline: 0.125rem;
+}
+
+.tab-strip-scroll .tab-strip-item {
+  touch-action: pan-x;
+  -webkit-user-select: none;
+  user-select: none;
+  scroll-snap-align: start;
+}
+
+.tab-scroll-fade::before,
+.tab-scroll-fade::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1rem;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.tab-scroll-fade::before {
+  left: 0;
+  background: linear-gradient(to right, var(--bg-card), transparent);
+}
+
+.tab-scroll-fade::after {
+  right: 0;
+  background: linear-gradient(to left, var(--bg-card), transparent);
+}
+
+.app-bottom-nav {
+  padding-bottom: max(0.35rem, var(--safe-bottom));
+  background: var(--bg-card);
+  border-top: 1px solid var(--border-color);
+}
+
+.faculty-exit-bar {
+  flex-shrink: 0;
+  background: #78350f;
+  color: #fffbeb;
+  padding: 0.5rem 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  border-bottom: 1px solid #92400e;
+}
+
+.shell-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  background: rgba(15, 23, 42, 0.72);
+  backdrop-filter: blur(4px);
+}
+
+[data-theme="dark"] .shell-overlay {
+  background: rgba(15, 23, 42, 0.72);
+}
+
+.touch-target {
+  min-width: 48px;
+  min-height: 48px;
+}
+
+.no-scrollbar {
+  scrollbar-width: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+button,
+a,
+[role='button'] {
+  touch-action: manipulation;
+}
+
+input,
+select,
+textarea {
+  font-size: 16px;
+}
+
+@keyframes slideInLeft {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.animate-slideInLeft {
+  animation: slideInLeft 250ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-fadeIn {
+  animation: fadeIn 200ms ease-out forwards;
+}

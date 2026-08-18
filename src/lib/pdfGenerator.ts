@@ -1978,6 +1978,27 @@ export function buildPatientPDFDoc(patient: PatientRecord, profile: StudentProfi
       doc.line(p1.x, p1.y, p2.x, p2.y);
     }
 
+    // Transverse Width Guidelines (Intercanine Span with Clean Dynamic Pill)
+    const pCL = toSlidePt(geom.canineLeft);
+    const pCR = toSlidePt(geom.canineRight);
+    doc.setDrawColor(13, 148, 136);
+    doc.setLineWidth(0.2);
+    doc.setLineDashPattern([1, 1], 0);
+    doc.line(pCL.x, pCL.y, pCR.x, pCR.y);
+    doc.setLineDashPattern([], 0);
+
+    // Solid white badge pill for C-C' Span (drawn before landmarks so text is never covered)
+    const badgeW = Math.min(22, Math.max(14, geom.metrics.intercanineSpan - 4));
+    doc.setFillColor(255, 255, 255);
+    doc.setDrawColor(13, 148, 136);
+    doc.setLineWidth(0.2);
+    doc.roundedRect(originX - badgeW / 2, pCL.y - 3.8, badgeW, 4.8, 1, 1, 'FD');
+
+    doc.setFontSize(5.0);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(13, 148, 136);
+    doc.text(`C-C' Span: ${geom.metrics.intercanineSpan.toFixed(1)} mm`, originX, pCL.y - 0.6, { align: 'center' });
+
     // Tooth Landmarks with STAGGERED ZERO-COLLISION OFFSETS
     const isUpper = archJaw === 'Maxillary';
     const toothLabels: Record<string, string> = isUpper
@@ -2037,31 +2058,31 @@ export function buildPatientPDFDoc(patient: PatientRecord, profile: StudentProfi
         offX = -13;
         offY = -0.5;
       } else if (item.key === 'canineRight') {
-        offX = 3;
+        offX = 3.5;
         offY = -0.5;
       } else if (item.key === 'premolar1Left') {
         offX = -14;
         offY = -1.2;
       } else if (item.key === 'premolar1Right') {
-        offX = 3;
+        offX = 3.5;
         offY = -1.2;
       } else if (item.key === 'premolar2Left') {
         offX = -14;
         offY = 2.4;
       } else if (item.key === 'premolar2Right') {
-        offX = 3;
+        offX = 3.5;
         offY = 2.4;
       } else if (item.key === 'molar1Left') {
         offX = -14;
         offY = -1.2;
       } else if (item.key === 'molar1Right') {
-        offX = 3;
+        offX = 3.5;
         offY = -1.2;
       } else if (item.key === 'molar2Left') {
         offX = -14;
         offY = 2.4;
       } else if (item.key === 'molar2Right') {
-        offX = 3;
+        offX = 3.5;
         offY = 2.4;
       } else if (item.key === 'pointOLeft') {
         offX = 2.5;
@@ -2070,32 +2091,12 @@ export function buildPatientPDFDoc(patient: PatientRecord, profile: StudentProfi
         offX = -6.5;
         offY = -3.5;
       } else {
-        offX = item.isRight ? 3 : -12;
+        offX = item.isRight ? 3.5 : -12;
         offY = 1.5;
       }
 
       doc.text(labelText, p.x + offX, p.y + offY);
     });
-
-    // Transverse Width Guidelines (Intercanine Span with Clean White Pill)
-    const pCL = toSlidePt(geom.canineLeft);
-    const pCR = toSlidePt(geom.canineRight);
-    doc.setDrawColor(13, 148, 136);
-    doc.setLineWidth(0.2);
-    doc.setLineDashPattern([1, 1], 0);
-    doc.line(pCL.x, pCL.y, pCR.x, pCR.y);
-    doc.setLineDashPattern([], 0);
-
-    // Solid white badge pill for C-C' Span to prevent construction line collision
-    doc.setFillColor(255, 255, 255);
-    doc.setDrawColor(13, 148, 136);
-    doc.setLineWidth(0.2);
-    doc.roundedRect(originX - 15, pCL.y - 3.8, 30, 4.8, 1, 1, 'FD');
-
-    doc.setFontSize(5.2);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(13, 148, 136);
-    doc.text(`C-C' Span: ${geom.metrics.intercanineSpan.toFixed(1)} mm`, originX, pCL.y - 0.6, { align: 'center' });
 
     // --- RIGHT COLUMN: ARCH METRICS, STUDENT WIRE BENDING PROTOCOL & GRADING RUBRIC ---
     let rightY = startY;

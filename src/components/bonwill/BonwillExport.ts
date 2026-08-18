@@ -319,13 +319,32 @@ function renderHawleyPage(doc: jsPDF, data: BonwillTemplateData, pageNum: number
         pointORight: 'O\'',
       };
 
+  // Intercanine Span Dimension Line & Label
+  doc.setDrawColor(13, 148, 136);
+  doc.setLineWidth(0.2);
+  doc.setLineDashPattern([1, 1], 0);
+  doc.line(cL.x, cL.y, cR.x, cR.y);
+  doc.setLineDashPattern([], 0);
+
+  const spanBadgeW = Math.min(24, Math.max(16, geom.metrics.intercanineSpan - 4));
+  doc.setFillColor(255, 255, 255);
+  doc.setDrawColor(13, 148, 136);
+  doc.setLineWidth(0.2);
+  doc.roundedRect(originX - spanBadgeW / 2, cL.y - 3.2, spanBadgeW, 4.2, 0.8, 0.8, 'FD');
+
+  doc.setFontSize(4.8);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(13, 148, 136);
+  doc.text(`C-C' Span: ${geom.metrics.intercanineSpan.toFixed(1)} mm`, originX, cL.y - 0.5, { align: 'center' });
+
   geom.landmarkList.forEach((item) => {
     const p = toPdf(item.point);
     const isApex = item.key === 'pointA';
     const isCenter = item.key === 'pointB';
     const isCanine = item.key === 'canineLeft' || item.key === 'canineRight';
+    const isPointO = item.key === 'pointOLeft' || item.key === 'pointORight';
 
-    doc.setFillColor(isApex ? 225 : isCenter ? 168 : isCanine ? 16 : 2, isApex ? 29 : isCenter ? 85 : isCanine ? 185 : 132, isApex ? 72 : isCenter ? 247 : isCanine ? 129 : 199);
+    doc.setFillColor(isApex ? 225 : isCenter ? 168 : isCanine ? 16 : isPointO ? 249 : 2, isApex ? 29 : isCenter ? 85 : isCanine ? 185 : isPointO ? 115 : 132, isApex ? 72 : isCenter ? 247 : isCanine ? 129 : isPointO ? 22 : 199);
     doc.circle(p.x, p.y, isApex ? 1.3 : isCanine ? 1.1 : 0.85, 'F');
 
     doc.setFontSize(5.0);
@@ -333,23 +352,32 @@ function renderHawleyPage(doc: jsPDF, data: BonwillTemplateData, pageNum: number
     doc.setTextColor(15, 23, 42);
 
     const labelText = toothLabels[item.key] || item.label;
-    const offsetX = item.isRight ? 3 : item.isLeft ? -13 : -5;
-    const offsetY = isApex ? -2.5 : 3;
+    let offsetX = item.isRight ? 3.5 : item.isLeft ? -13 : -5;
+    let offsetY = 1.2;
+
+    if (isApex) {
+      offsetX = -7;
+      offsetY = -2.2;
+    } else if (isCanine) {
+      offsetY = -0.5;
+    } else if (item.key === 'premolar1Left' || item.key === 'premolar1Right') {
+      offsetY = -1.2;
+    } else if (item.key === 'premolar2Left' || item.key === 'premolar2Right') {
+      offsetY = 2.4;
+    } else if (item.key === 'molar1Left' || item.key === 'molar1Right') {
+      offsetY = -1.2;
+    } else if (item.key === 'molar2Left' || item.key === 'molar2Right') {
+      offsetY = 2.4;
+    } else if (item.key === 'pointOLeft') {
+      offsetX = 2.5;
+      offsetY = -3.0;
+    } else if (item.key === 'pointORight') {
+      offsetX = -6.5;
+      offsetY = -3.0;
+    }
 
     doc.text(labelText, p.x + offsetX, p.y + offsetY);
   });
-
-  // Intercanine Span Dimension Line
-  doc.setDrawColor(13, 148, 136);
-  doc.setLineWidth(0.2);
-  doc.setLineDashPattern([1, 1], 0);
-  doc.line(cL.x, cL.y, cR.x, cR.y);
-  doc.setLineDashPattern([], 0);
-
-  doc.setFontSize(4.8);
-  doc.setFont('helvetica', 'bold');
-  doc.setTextColor(13, 148, 136);
-  doc.text(`Intercanine Span: ${geom.metrics.intercanineSpan.toFixed(1)} mm`, originX - 14, cL.y - 1.5);
 
   // -------------------------------------------------------------
   // 8. THREE BENCH CARDS: METRICS, LAB BENDING GUIDE & GRADING

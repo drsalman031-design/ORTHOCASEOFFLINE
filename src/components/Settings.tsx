@@ -25,7 +25,6 @@ import {
   Lock,
   Clock,
   TrendingUp,
-  Brain,
   Shield,
   Info,
   ChevronRight,
@@ -278,26 +277,6 @@ export const Settings: React.FC<SettingsProps> = ({
 
       {/* GROUPED NAVIGATION SECTIONS */}
       <div className="space-y-3">
-        {/* CLINICAL DECISION ENGINES (100% LOCAL & OFFLINE) */}
-        <div className="space-y-1">
-          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider ml-1">
-            Clinical Decision Engines (100% Offline)
-          </p>
-          <div className="bg-white border border-slate-200/80 rounded-2xl divide-y divide-slate-100 overflow-hidden shadow-2xs">
-            <div className="flex items-center justify-between px-3.5 py-2.5">
-              <div className="flex items-center gap-2.5">
-                <Brain className="w-4 h-4 text-teal-600" />
-                <div>
-                  <span className="text-xs font-bold text-slate-800 block">Deterministic Diagnostic Engine</span>
-                  <span className="text-[10px] text-slate-500">13-section rule analysis running locally</span>
-                </div>
-              </div>
-              <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-                100% Offline
-              </span>
-            </div>
-          </div>
-        </div>
 
         {/* SECURE DATA VAULT & BACKUP */}
         <div className="space-y-1">

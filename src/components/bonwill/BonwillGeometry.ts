@@ -220,11 +220,13 @@ export function calculateHawleyGeometry(
     y: canineRight.y + t_O * rightRayDir.y,
   };
 
-  // Step D: Plot Premolar & Molar Landmarks
+  const isUpper = inputData.archType !== 'Mandibular';
+
+  // Step D: Plot Premolar & Molar Landmarks (strictly progressive anatomical sequence from C to M2)
   // Measured relative to Point O along the ray:
-  // Canine: at C / C'
-  // Premolar 1: 6.5 mm inside from O
-  const t_PM1 = t_O - 6.5;
+  // Canine: at C / C' (t = 0)
+  // Premolar 1: 8.0 mm inside from O
+  const t_PM1 = t_O - 8.0;
   const premolar1Left: Point2D = {
     x: canineLeft.x + t_PM1 * leftRayDir.x,
     y: canineLeft.y + t_PM1 * leftRayDir.y,
@@ -234,8 +236,8 @@ export function calculateHawleyGeometry(
     y: canineRight.y + t_PM1 * rightRayDir.y,
   };
 
-  // Premolar 2: 4.0 mm outside from O
-  const t_PM2 = t_O + 4.0;
+  // Premolar 2: 1.5 mm inside from O (between P1 and Point O)
+  const t_PM2 = t_O - 1.5;
   const premolar2Left: Point2D = {
     x: canineLeft.x + t_PM2 * leftRayDir.x,
     y: canineLeft.y + t_PM2 * leftRayDir.y,
@@ -245,8 +247,8 @@ export function calculateHawleyGeometry(
     y: canineRight.y + t_PM2 * rightRayDir.y,
   };
 
-  // Molar 1: 1.0 mm outside from O
-  const t_M1 = t_O + 1.0;
+  // Molar 1: 4.5 mm outside from O (distal to Point O)
+  const t_M1 = t_O + 4.5;
   const molar1Left: Point2D = {
     x: canineLeft.x + t_M1 * leftRayDir.x,
     y: canineLeft.y + t_M1 * leftRayDir.y,
@@ -256,8 +258,8 @@ export function calculateHawleyGeometry(
     y: canineRight.y + t_M1 * rightRayDir.y,
   };
 
-  // Molar 2: 4.5 mm inside from O
-  const t_M2 = t_O - 4.5;
+  // Molar 2: 11.5 mm outside from O (terminal distal tooth)
+  const t_M2 = t_O + 11.5;
   const molar2Left: Point2D = {
     x: canineLeft.x + t_M2 * leftRayDir.x,
     y: canineLeft.y + t_M2 * leftRayDir.y,
@@ -267,8 +269,8 @@ export function calculateHawleyGeometry(
     y: canineRight.y + t_M2 * rightRayDir.y,
   };
 
-  // Generate Ray Lines for Canvas rendering
-  const maxRayDist = t_O + 15.0; // extend past Point O
+  // Generate Ray Lines for Canvas rendering (extending past M2)
+  const maxRayDist = t_M2 + 5.0;
   const leftRayPoints: Point2D[] = [
     canineLeft,
     { x: canineLeft.x + maxRayDist * leftRayDir.x, y: canineLeft.y + maxRayDist * leftRayDir.y },
@@ -294,21 +296,19 @@ export function calculateHawleyGeometry(
     });
   }
 
-  // Continuous Full Arch Path (Left Ray End -> Left Canine -> Anterior Arc -> Right Canine -> Right Ray End)
+  // Continuous Full Arch Path (Strict Anatomical Progression: M2 -> M1 -> P2 -> P1 -> Canine -> Arc -> Canine -> P1 -> P2 -> M1 -> M2)
   const fullArchPath: Point2D[] = [
-    premolar2Left,
-    molar1Left,
-    pointOLeft,
     molar2Left,
+    molar1Left,
+    premolar2Left,
     premolar1Left,
     canineLeft,
     ...anteriorArcPoints.slice(1, -1),
     canineRight,
     premolar1Right,
-    molar2Right,
-    pointORight,
-    molar1Right,
     premolar2Right,
+    molar1Right,
+    molar2Right,
   ];
 
   // Span Measurements
@@ -319,29 +319,29 @@ export function calculateHawleyGeometry(
 
   const canineDepth = Math.abs(canineLeft.y);
   const molar1Depth = Math.abs(molar1Left.y);
-  const archLength = Math.abs(premolar2Left.y);
+  const archLength = Math.abs(molar2Left.y);
 
   // Compute Arch Perimeter (Arc length + ray lengths)
   const arcLengthMm = r * ((2.0 * Math.PI) / 3.0); // 120 deg = 2/3 PI
-  const rayLengthMm = t_PM2;
+  const rayLengthMm = t_M2;
   const archPerimeter = arcLengthMm + 2.0 * rayLengthMm;
 
-  // Landmark List for UI Labels
+  // Landmark List for UI Labels with standard FDI notation
   const landmarkList: HawleyLandmarkPoint[] = [
-    { key: 'pointA', label: 'Incisal Edge Apex (A)', point: pointA, isRight: false, isLeft: false, isCenter: true },
+    { key: 'pointA', label: isUpper ? '11|21 (A)' : '31|41 (A)', point: pointA, isRight: false, isLeft: false, isCenter: true },
     { key: 'pointB', label: 'Inner Circle Center (B)', point: pointB, isRight: false, isLeft: false, isCenter: true },
-    { key: 'canineLeft', label: 'L Canine (C)', point: canineLeft, isRight: false, isLeft: true },
-    { key: 'canineRight', label: 'R Canine (C\')', point: canineRight, isRight: true, isLeft: false },
-    { key: 'premolar1Left', label: 'L Premolar 1 (6.5mm in O)', point: premolar1Left, isRight: false, isLeft: true },
-    { key: 'premolar1Right', label: 'R Premolar 1 (6.5mm in O)', point: premolar1Right, isRight: true, isLeft: false },
-    { key: 'molar2Left', label: 'L Molar 2 (4.5mm in O)', point: molar2Left, isRight: false, isLeft: true },
-    { key: 'molar2Right', label: 'R Molar 2 (4.5mm in O)', point: molar2Right, isRight: true, isLeft: false },
-    { key: 'pointOLeft', label: 'L Point O (2r Arc Intersect)', point: pointOLeft, isRight: false, isLeft: true },
-    { key: 'pointORight', label: 'R Point O (2r Arc Intersect)', point: pointORight, isRight: true, isLeft: false },
-    { key: 'molar1Left', label: 'L Molar 1 (1.0mm out O)', point: molar1Left, isRight: false, isLeft: true },
-    { key: 'molar1Right', label: 'R Molar 1 (1.0mm out O)', point: molar1Right, isRight: true, isLeft: false },
-    { key: 'premolar2Left', label: 'L Premolar 2 (4.0mm out O)', point: premolar2Left, isRight: false, isLeft: true },
-    { key: 'premolar2Right', label: 'R Premolar 2 (4.0mm out O)', point: premolar2Right, isRight: true, isLeft: false },
+    { key: 'canineLeft', label: isUpper ? '23 (C)' : '33 (C)', point: canineLeft, isRight: false, isLeft: true },
+    { key: 'canineRight', label: isUpper ? '13 (C\')' : '43 (C\')', point: canineRight, isRight: true, isLeft: false },
+    { key: 'premolar1Left', label: isUpper ? '24 (P1)' : '34 (P1)', point: premolar1Left, isRight: false, isLeft: true },
+    { key: 'premolar1Right', label: isUpper ? '14 (P1)' : '44 (P1)', point: premolar1Right, isRight: true, isLeft: false },
+    { key: 'premolar2Left', label: isUpper ? '25 (P2)' : '35 (P2)', point: premolar2Left, isRight: false, isLeft: true },
+    { key: 'premolar2Right', label: isUpper ? '15 (P2)' : '45 (P2)', point: premolar2Right, isRight: true, isLeft: false },
+    { key: 'pointOLeft', label: 'O', point: pointOLeft, isRight: false, isLeft: true },
+    { key: 'pointORight', label: 'O\'', point: pointORight, isRight: true, isLeft: false },
+    { key: 'molar1Left', label: isUpper ? '26 (M1)' : '36 (M1)', point: molar1Left, isRight: false, isLeft: true },
+    { key: 'molar1Right', label: isUpper ? '16 (M1)' : '46 (M1)', point: molar1Right, isRight: true, isLeft: false },
+    { key: 'molar2Left', label: isUpper ? '27 (M2)' : '37 (M2)', point: molar2Left, isRight: false, isLeft: true },
+    { key: 'molar2Right', label: isUpper ? '17 (M2)' : '47 (M2)', point: molar2Right, isRight: true, isLeft: false },
   ];
 
   // Bonwill Equilateral Triangle definition (1:1 Exact 100.0 mm side reference)

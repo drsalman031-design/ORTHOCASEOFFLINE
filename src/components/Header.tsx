@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import { ToothIcon } from './ToothIcon';
 import { StudentProfile, PatientRecord, NotificationItem, UserAccount } from '../types';
-import { getCurrentUserAccount, setCurrentUserAccount, PRESET_ACCOUNTS } from '../lib/authContext';
+import { getCurrentUserAccount, setCurrentUserAccount } from '../lib/authContext';
 import {
   getNotificationsForUser,
   markNotificationAsRead,
@@ -109,7 +109,9 @@ export const Header: React.FC<HeaderProps> = React.memo(({
   const deptName = currentUser?.department === 'Orthodontics & Dentofacial Orthopedics' ? 'Dept. of Orthodontics' : (currentUser?.department || 'Dept. of Orthodontics');
 
 return (
-    <header className="z-40 bg-[#071B49] text-white shadow-md border-b border-[#0A2668] shrink-0 sticky top-0 flex flex-wrap justify-between items-center font-sans">
+    <header className="z-40 bg-[#071B49] text-white shadow-md border-b border-[#0A2668] shrink-0 sticky top-0 flex flex-col font-sans"
+      style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}
+    >
       {/* TOP NAV BAR */}
       <div className="h-[46px] flex items-center w-full">
         <div className="w-full max-w-md mx-auto px-3.5 flex items-center justify-between gap-2 min-w-0">

@@ -5,7 +5,7 @@ import {
   UserAccount,
   PatientRecord,
 } from '../types';
-import { PRESET_ACCOUNTS } from './authContext';
+
 
 const NOTIFICATIONS_STORAGE_KEY = 'orthocase_notifications_v2';
 const REMINDERS_LOG_KEY = 'orthocase_reminders_log';

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import {
   Eye,
   EyeOff,
@@ -11,7 +11,6 @@ import {
   Building2,
   HelpCircle,
   Loader2,
-  Plus,
   Copy,
   Check,
   Shield,
@@ -21,7 +20,6 @@ import { ToothIcon } from './ToothIcon';
 import { UserAccount } from '../types';
 import {
   setCurrentUserAccount,
-  PRESET_ACCOUNTS,
   getCachedDeptCode,
   setCachedDeptCode,
   lookupDeptCode,
@@ -48,7 +46,6 @@ export const LoginScreen: React.FC<LoginScreenProps> = React.memo(({ onLoginSucc
   const [submitting, setSubmitting] = useState(false);
   const [customGoogleEmail, setCustomGoogleEmail] = useState('');
   const [customGoogleName, setCustomGoogleName] = useState('');
-  const [showCustomGoogleForm, setShowCustomGoogleForm] = useState(false);
   const [copiedEmail, setCopiedEmail] = useState(false);
 
   // Cached Form State
@@ -94,40 +91,27 @@ export const LoginScreen: React.FC<LoginScreenProps> = React.memo(({ onLoginSucc
       setTimeout(() => {
         setSubmitting(false);
         const trimmedEmail = email.trim();
-        const dummyToken = `jwt-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
-        setCachedSessionToken(dummyToken, rememberMe);
 
         if (!trimmedEmail) {
-          // Default to primary demo account if left blank
-          const preset = PRESET_ACCOUNTS[0];
-          setCurrentUserAccount(preset.id);
-          onLoginSuccess(preset);
+          setErrorMessage('Please enter your institutional email or roll number to sign in.');
           return;
         }
 
-        const found = PRESET_ACCOUNTS.find(
-          (acc) =>
-            acc.email.toLowerCase() === trimmedEmail.toLowerCase() ||
-            (acc.rollNumber && acc.rollNumber.toLowerCase() === trimmedEmail.toLowerCase())
-        );
+        const dummyToken = `jwt-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+        setCachedSessionToken(dummyToken, rememberMe);
 
-        if (found) {
-          setCurrentUserAccount(found.id);
-          onLoginSuccess(found);
-        } else {
-          const newUser: UserAccount = {
-            id: `usr-${Date.now()}`,
-            name: trimmedEmail.split('@')[0] || 'Clinician',
-            role: 'STUDENT',
-            email: trimmedEmail.includes('@') ? trimmedEmail : `${trimmedEmail.toLowerCase()}@institution.edu`,
-            designation: 'Resident / Clinician',
-            rollNumber: trimmedEmail.includes('@') ? 'ORTHO-PG' : trimmedEmail.toUpperCase(),
-            institution: deptInfo.institution || 'Department of Orthodontics & Dentofacial Orthopedics',
-            department: deptInfo.name || 'Orthodontics',
-          };
-          setCurrentUserAccount(newUser.id, newUser);
-          onLoginSuccess(newUser);
-        }
+        const newUser: UserAccount = {
+          id: `usr-${Date.now()}`,
+          name: trimmedEmail.split('@')[0] || 'Clinician',
+          role: 'STUDENT',
+          email: trimmedEmail.includes('@') ? trimmedEmail : `${trimmedEmail.toLowerCase()}@institution.edu`,
+          designation: 'Resident / Clinician',
+          rollNumber: trimmedEmail.includes('@') ? 'ORTHO-PG' : trimmedEmail.toUpperCase(),
+          institution: deptInfo.institution || 'Department of Orthodontics & Dentofacial Orthopedics',
+          department: deptInfo.name || 'Orthodontics',
+        };
+        setCurrentUserAccount(newUser.id, newUser);
+        onLoginSuccess(newUser);
       }, 250);
     });
   }, [email, rememberMe, deptCode, deptInfo, onLoginSuccess]);
@@ -141,27 +125,18 @@ export const LoginScreen: React.FC<LoginScreenProps> = React.memo(({ onLoginSucc
       const dummyToken = `google-jwt-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
       setCachedSessionToken(dummyToken, true);
 
-      const existingPreset = PRESET_ACCOUNTS.find(
-        (acc) => acc.email.toLowerCase() === googleUser.email.toLowerCase()
-      );
-
-      if (existingPreset) {
-        setCurrentUserAccount(existingPreset.id);
-        onLoginSuccess(existingPreset);
-      } else {
-        const newUser: UserAccount = {
-          id: `usr-google-${Date.now()}`,
-          name: googleUser.name,
-          role: 'STUDENT',
-          email: googleUser.email,
-          designation: 'PG Resident / Orthodontist',
-          rollNumber: 'ORTHO-GOOGLE-PG',
-          institution: 'Department of Orthodontics & Dentofacial Orthopedics',
-          department: 'Postgraduate Orthodontics',
-        };
-        setCurrentUserAccount(newUser.id, newUser);
-        onLoginSuccess(newUser);
-      }
+      const newUser: UserAccount = {
+        id: `usr-google-${Date.now()}`,
+        name: googleUser.name,
+        role: 'STUDENT',
+        email: googleUser.email,
+        designation: 'PG Resident / Orthodontist',
+        rollNumber: 'ORTHO-GOOGLE-PG',
+        institution: 'Department of Orthodontics & Dentofacial Orthopedics',
+        department: 'Postgraduate Orthodontics',
+      };
+      setCurrentUserAccount(newUser.id, newUser);
+      onLoginSuccess(newUser);
     }, 300);
   }, [onLoginSuccess]);
 
@@ -190,7 +165,15 @@ export const LoginScreen: React.FC<LoginScreenProps> = React.memo(({ onLoginSucc
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#F4F6FB] text-slate-800 flex flex-col items-center justify-between p-4 sm:p-6 font-sans relative selection:bg-blue-100">
+    <div
+      className="min-h-[100dvh] h-full w-full bg-[#F4F6FB] text-slate-800 flex flex-col items-center justify-between p-4 sm:p-6 font-sans relative selection:bg-blue-100 overflow-y-auto overflow-x-hidden"
+      style={{
+        paddingTop: 'max(1rem, env(safe-area-inset-top, 0px))',
+        paddingBottom: 'max(1rem, env(safe-area-inset-bottom, 0px))',
+        paddingLeft: 'max(1rem, env(safe-area-inset-left, 0px))',
+        paddingRight: 'max(1rem, env(safe-area-inset-right, 0px))',
+      }}
+    >
       {/* BACKGROUND AMBIENT GLOW */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-2xl h-80 bg-gradient-to-b from-blue-100/50 via-sky-50/30 to-transparent pointer-events-none rounded-b-[48px]" />
 
@@ -500,10 +483,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = React.memo(({ onLoginSucc
               </div>
               <button
                 type="button"
-                onClick={() => {
-                  setGoogleModalOpen(false);
-                  setShowCustomGoogleForm(false);
-                }}
+                onClick={() => setGoogleModalOpen(false)}
                 className="p-1 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-700 cursor-pointer"
               >
                 <X className="w-4 h-4" />
@@ -515,66 +495,9 @@ export const LoginScreen: React.FC<LoginScreenProps> = React.memo(({ onLoginSucc
                 <Loader2 className="w-8 h-8 text-[#0D52D6] animate-spin" />
                 <p className="text-xs font-semibold text-slate-600">Signing in with Google SSO...</p>
               </div>
-            ) : !showCustomGoogleForm ? (
-              <div className="space-y-3">
-                <p className="text-xs text-slate-500">to continue to Ortho Case Academic Portal</p>
-
-                {/* Primary Google User Account */}
-                <button
-                  type="button"
-                  onClick={() =>
-                    handleGoogleAccountSelect({
-                      name: 'Dr. Salman',
-                      email: 'drsalman031@gmail.com',
-                    })
-                  }
-                  className="w-full p-3 rounded-2xl border border-blue-200 bg-blue-50/50 hover:bg-blue-50 text-left flex items-center gap-3 transition-all cursor-pointer"
-                >
-                  <div className="w-10 h-10 rounded-full bg-[#0D52D6] text-white flex items-center justify-center font-bold text-sm shrink-0 shadow-xs">
-                    S
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="font-bold text-xs text-slate-900 truncate">Dr. Salman</div>
-                    <div className="text-[11px] text-slate-500 truncate">drsalman031@gmail.com</div>
-                  </div>
-                  <span className="text-[10px] bg-blue-100 text-[#0D52D6] font-bold px-2 py-0.5 rounded-full">
-                    Primary
-                  </span>
-                </button>
-
-                {/* Additional Google account option */}
-                <button
-                  type="button"
-                  onClick={() =>
-                    handleGoogleAccountSelect({
-                      name: 'Dr. Rahul Sharma (Resident)',
-                      email: 'rahul.sharma@institution.edu',
-                    })
-                  }
-                  className="w-full p-3 rounded-2xl border border-slate-200 bg-white hover:bg-slate-50 text-left flex items-center gap-3 transition-all cursor-pointer"
-                >
-                  <div className="w-10 h-10 rounded-full bg-emerald-600 text-white flex items-center justify-center font-bold text-sm shrink-0 shadow-xs">
-                    R
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="font-bold text-xs text-slate-900 truncate">Dr. Rahul Sharma</div>
-                    <div className="text-[11px] text-slate-500 truncate">rahul.sharma@institution.edu</div>
-                  </div>
-                </button>
-
-                {/* Use another account */}
-                <button
-                  type="button"
-                  onClick={() => setShowCustomGoogleForm(true)}
-                  className="w-full p-2.5 rounded-2xl border border-dashed border-slate-300 hover:border-slate-400 bg-slate-50 hover:bg-slate-100 text-xs font-semibold text-slate-700 flex items-center justify-center gap-2 transition-all cursor-pointer"
-                >
-                  <Plus className="w-4 h-4" />
-                  <span>Use another Google account</span>
-                </button>
-              </div>
             ) : (
               <form onSubmit={handleCustomGoogleSubmit} className="space-y-3">
-                <p className="text-xs text-slate-600 font-medium">Enter your Google email to sign in:</p>
+                <p className="text-xs text-slate-500">to continue to Ortho Case Academic Portal</p>
                 <div>
                   <label className="text-[11px] font-bold text-slate-600 block mb-1">Your Name</label>
                   <input
@@ -582,6 +505,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = React.memo(({ onLoginSucc
                     value={customGoogleName}
                     onChange={(e) => setCustomGoogleName(e.target.value)}
                     placeholder="Dr. Full Name"
+                    autoFocus
                     className="w-full p-2.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs text-slate-900 focus:ring-2 focus:ring-[#0D52D6] focus:outline-none"
                   />
                 </div>
@@ -591,26 +515,18 @@ export const LoginScreen: React.FC<LoginScreenProps> = React.memo(({ onLoginSucc
                     type="email"
                     value={customGoogleEmail}
                     onChange={(e) => setCustomGoogleEmail(e.target.value)}
-                    placeholder="user@institution.edu"
+                    placeholder="yourname@gmail.com"
                     required
                     className="w-full p-2.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs text-slate-900 focus:ring-2 focus:ring-[#0D52D6] focus:outline-none"
                   />
                 </div>
-                <div className="flex items-center gap-2 pt-1">
-                  <button
-                    type="button"
-                    onClick={() => setShowCustomGoogleForm(false)}
-                    className="w-1/2 py-2.5 rounded-2xl border border-slate-200 text-slate-600 text-xs font-semibold hover:bg-slate-50 cursor-pointer"
-                  >
-                    Back
-                  </button>
-                  <button
-                    type="submit"
-                    className="w-1/2 py-2.5 rounded-2xl bg-[#0D52D6] hover:bg-[#1565C0] text-white text-xs font-bold shadow-md cursor-pointer"
-                  >
-                    Continue
-                  </button>
-                </div>
+                <button
+                  type="submit"
+                  disabled={!customGoogleEmail.trim()}
+                  className="w-full py-2.5 rounded-2xl bg-[#0D52D6] hover:bg-[#1565C0] disabled:opacity-60 disabled:cursor-not-allowed text-white text-xs font-bold shadow-md cursor-pointer transition-all"
+                >
+                  Continue with Google
+                </button>
               </form>
             )}
           </div>

@@ -22,8 +22,11 @@ export const BottomNav: React.FC<BottomNavProps> = React.memo(({
   patientCount = 0,
 }) => {
   return (
-    <nav className="shrink-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200/90 h-[60px] flex items-center justify-between px-3 relative shadow-[0_-2px_12px_rgba(0,0,0,0.06)] pb-[max(0px,env(safe-area-inset-bottom))]">
-      <div className="w-full max-w-md mx-auto flex items-center justify-between h-full">
+    <nav
+      className="shrink-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200/90 relative shadow-[0_-2px_12px_rgba(0,0,0,0.06)]"
+      style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+    >
+      <div className="w-full max-w-md mx-auto flex items-center justify-between h-[60px] px-3">
         {/* 1. Dashboard */}
         <button
           type="button"
@@ -34,7 +37,7 @@ export const BottomNav: React.FC<BottomNavProps> = React.memo(({
           }`}
         >
           <LayoutGrid className={`w-4.5 h-4.5 ${activeTab === 'home' ? 'stroke-[2.4px] text-[#071B49]' : 'stroke-[1.8px]'}`} />
-          <span className={`text-xs leading-none mt-1 truncate max-w-full ${activeTab === 'home' ? 'font-bold text-[#071B49]' : 'font-medium text-slate-500'}`}>
+          <span className={`text-[11px] leading-none mt-1 ${activeTab === 'home' ? 'font-bold text-[#071B49]' : 'font-medium text-slate-500'}`}>
             Dashboard
           </span>
         </button>
@@ -56,7 +59,7 @@ export const BottomNav: React.FC<BottomNavProps> = React.memo(({
               </span>
             )}
           </div>
-          <span className={`text-xs leading-none mt-1 truncate max-w-full ${activeTab === 'patients' || activeTab === 'review' ? 'font-bold text-[#071B49]' : 'font-medium text-slate-500'}`}>
+          <span className={`text-[11px] leading-none mt-1 ${activeTab === 'patients' || activeTab === 'review' ? 'font-bold text-[#071B49]' : 'font-medium text-slate-500'}`}>
             My Cases
           </span>
         </button>
@@ -85,7 +88,7 @@ export const BottomNav: React.FC<BottomNavProps> = React.memo(({
           }`}
         >
           <FileText className={`w-4.5 h-4.5 ${activeTab === 'reports' ? 'stroke-[2.4px] text-[#071B49]' : 'stroke-[1.8px]'}`} />
-          <span className={`text-xs leading-none mt-1 truncate max-w-full ${activeTab === 'reports' ? 'font-bold text-[#071B49]' : 'font-medium text-slate-500'}`}>
+          <span className={`text-[11px] leading-none mt-1 ${activeTab === 'reports' ? 'font-bold text-[#071B49]' : 'font-medium text-slate-500'}`}>
             PDF Reports
           </span>
         </button>
@@ -100,7 +103,7 @@ export const BottomNav: React.FC<BottomNavProps> = React.memo(({
           }`}
         >
           <SettingsIcon className={`w-4.5 h-4.5 ${activeTab === 'settings' ? 'stroke-[2.4px] text-[#071B49]' : 'stroke-[1.8px]'}`} />
-          <span className={`text-xs leading-none mt-1 truncate max-w-full ${activeTab === 'settings' ? 'font-bold text-[#071B49]' : 'font-medium text-slate-500'}`}>
+          <span className={`text-[11px] leading-none mt-1 ${activeTab === 'settings' ? 'font-bold text-[#071B49]' : 'font-medium text-slate-500'}`}>
             Settings
           </span>
         </button>

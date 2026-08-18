@@ -1,76 +1,5 @@
 import { UserAccount } from '../types';
 
-export const PRESET_ACCOUNTS: UserAccount[] = [
-  {
-    id: 'usr-student-1',
-    name: 'Dr. Rahul Sharma',
-    role: 'STUDENT',
-    email: 'rahul.sharma@institution.edu',
-    designation: 'PG Resident (Y2)',
-    rollNumber: 'ORTHO-2024-PG-01',
-    institution: 'Department of Orthodontics',
-    department: 'Orthodontics & Dentofacial Orthopedics',
-  },
-  {
-    id: 'usr-student-2',
-    name: 'Dr. Ananya Deshmukh',
-    role: 'STUDENT',
-    email: 'ananya.deshmukh@institution.edu',
-    designation: 'PG Resident (Y2)',
-    rollNumber: 'ORTHO-2024-PG-02',
-    institution: 'Department of Orthodontics',
-    department: 'Orthodontics & Dentofacial Orthopedics',
-  },
-  {
-    id: 'usr-student-3',
-    name: 'Dr. James Wilson',
-    role: 'STUDENT',
-    email: 'james.wilson@institution.edu',
-    designation: 'PG Resident (Y3 Senior)',
-    rollNumber: 'ORTHO-2023-PG-08',
-    institution: 'Department of Orthodontics',
-    department: 'Orthodontics & Dentofacial Orthopedics',
-  },
-  {
-    id: 'usr-student-4',
-    name: 'Dr. Sarah Chen',
-    role: 'STUDENT',
-    email: 'sarah.chen@institution.edu',
-    designation: 'PG Resident (Y2 Junior)',
-    rollNumber: 'ORTHO-2024-PG-12',
-    institution: 'Department of Orthodontics',
-    department: 'Orthodontics & Dentofacial Orthopedics',
-  },
-  {
-    id: 'usr-student-5',
-    name: 'Dr. Aarav Mehta',
-    role: 'STUDENT',
-    email: 'aarav.mehta@institution.edu',
-    designation: 'PG Resident (Y1)',
-    rollNumber: 'ORTHO-2025-PG-03',
-    institution: 'Department of Orthodontics',
-    department: 'Orthodontics & Dentofacial Orthopedics',
-  },
-  {
-    id: 'usr-faculty-1',
-    name: 'Dr. Sunita Patil',
-    role: 'STAFF_GUIDE',
-    email: 'sunita.patil@institution.edu',
-    designation: 'Associate Professor & Guide',
-    institution: 'Department of Orthodontics',
-    department: 'Orthodontics & Dentofacial Orthopedics',
-  },
-  {
-    id: 'usr-hod-1',
-    name: 'Prof. Dr. A. K. Varma',
-    role: 'HOD',
-    email: 'ak.varma@institution.edu',
-    designation: 'Professor & Head of Department',
-    institution: 'Department of Orthodontics',
-    department: 'Orthodontics & Dentofacial Orthopedics',
-  },
-];
-
 const LOCAL_STORAGE_USER_KEY = 'orthocase_current_user_id';
 const LOCAL_STORAGE_USER_DATA_KEY = 'orthocase_current_user_data';
 const LOCAL_STORAGE_ASSIGNMENTS_KEY = 'orthocase_student_assignments';
@@ -162,33 +91,27 @@ export function setCachedSessionToken(token: string, persist = true): void {
   } catch {}
 }
 
-export function getCurrentUserAccount(): UserAccount {
+export function getCurrentUserAccount(): UserAccount | null {
   const savedId = localStorage.getItem(LOCAL_STORAGE_USER_KEY);
-  if (savedId) {
-    const found = PRESET_ACCOUNTS.find((acc) => acc.id === savedId);
-    if (found) {
-      return found;
-    }
-    const savedData = localStorage.getItem(LOCAL_STORAGE_USER_DATA_KEY);
-    if (savedData) {
-      try {
-        const parsed = JSON.parse(savedData);
-        if (parsed && parsed.id === savedId) {
-          return parsed;
-        }
-      } catch (e) {
-        // fallback
+  if (!savedId) return null;
+
+  const savedData = localStorage.getItem(LOCAL_STORAGE_USER_DATA_KEY);
+  if (savedData) {
+    try {
+      const parsed = JSON.parse(savedData);
+      if (parsed && parsed.id === savedId) {
+        return parsed;
       }
+    } catch (e) {
+      // fallback: corrupt data — clear and force re-login
     }
   }
-  return PRESET_ACCOUNTS[0]; // Default fallback for active session
+  return null;
 }
 
 export function getActiveUserAccount(): UserAccount | null {
   const savedId = localStorage.getItem(LOCAL_STORAGE_USER_KEY);
   if (!savedId) return null;
-  const found = PRESET_ACCOUNTS.find((acc) => acc.id === savedId);
-  if (found) return found;
 
   const savedData = localStorage.getItem(LOCAL_STORAGE_USER_DATA_KEY);
   if (savedData) {
@@ -204,7 +127,7 @@ export function getActiveUserAccount(): UserAccount | null {
   return null;
 }
 
-export function setCurrentUserAccount(userId: string, userObj?: UserAccount): UserAccount {
+export function setCurrentUserAccount(userId: string, userObj?: UserAccount): UserAccount | null {
   localStorage.setItem(LOCAL_STORAGE_USER_KEY, userId);
   if (userObj) {
     localStorage.setItem(LOCAL_STORAGE_USER_DATA_KEY, JSON.stringify(userObj));

@@ -21,8 +21,8 @@
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   --safe-left: env(safe-area-inset-left, 0px);
   --safe-right: env(safe-area-inset-right, 0px);
-  --header-h: 2.25rem;
-  --nav-h: 3.125rem;
+  --header-h: 2.875rem;         /* 46px nav bar only (safe-top added inline) */
+  --nav-h: 3.75rem;             /* 60px inner content row */
   --form-chrome-h: 2.375rem;
   --form-footer-h: 2.25rem;
   --space-1: 0.25rem;
@@ -93,7 +93,10 @@ html,
 body,
 #root {
   height: 100%;
+  width: 100%;
   margin: 0;
+  padding: 0;
+  overflow: hidden;
 }
 
 body {
@@ -161,18 +164,7 @@ body {
   }
 }
 
-.app-header {
-  padding-top: max(0.35rem, var(--safe-top));
-}
-
-.app-header--compact .app-header-sub {
-  display: none;
-}
-
-.app-header--compact .app-header-row {
-  padding-top: 0.4rem;
-  padding-bottom: 0.4rem;
-}
+/* app-header safe-area top is applied inline via style prop in Header.tsx */
 
 .app-main {
   flex: 1;
@@ -181,7 +173,8 @@ body {
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior-y: contain;
-  padding-bottom: calc(var(--nav-h) + var(--safe-bottom) + 0.75rem);
+  /* 60px nav content + safe-bottom + breathing room so last card clears the nav */
+  padding-bottom: calc(var(--nav-h) + var(--safe-bottom) + 1rem);
   scrollbar-width: none;
   position: relative;
 }
@@ -322,7 +315,7 @@ body {
 }
 
 .app-bottom-nav {
-  padding-bottom: max(0.35rem, var(--safe-bottom));
+  padding-bottom: env(safe-area-inset-bottom, 0px);
   background: var(--bg-card);
   border-top: 1px solid var(--border-color);
 }

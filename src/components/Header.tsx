@@ -115,15 +115,19 @@ return (
         <div className="w-full max-w-md mx-auto px-3.5 flex items-center justify-between gap-2 min-w-0">
           {/* BRAND LOGO & TITLE */}
           <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-8 h-8 rounded-lg bg-[#2563EB]/20 flex items-center justify-center text-white border border-[#2563EB]/40 shrink-0 shadow-xs">
-              <ToothIcon className="w-4.5 h-4.5 text-blue-300" />
+            <div className="w-8 h-8 rounded-lg overflow-hidden shrink-0 shadow-xs border border-teal-500/40 bg-teal-900/30">
+              <img
+                src="/app-logo.jpg"
+                alt="OrthoCase Logo"
+                className="w-full h-full object-cover"
+              />
             </div>
             <div className="min-w-0 flex items-center gap-2">
               <h1 className="font-extrabold text-sm sm:text-base tracking-tight text-white leading-none truncate">
                 OrthoCase
               </h1>
-              <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-400/30 shrink-0">
-                Clinical Logbook
+              <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-teal-500/20 text-teal-300 border border-teal-400/30 shrink-0">
+                Case Recording
               </span>
             </div>
           </div>

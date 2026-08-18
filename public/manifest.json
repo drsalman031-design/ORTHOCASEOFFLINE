@@ -1,7 +1,7 @@
 {
-  "name": "OrthoCase Student",
+  "name": "OrthoCase - Case Recording & Tracking",
   "short_name": "OrthoCase",
-  "description": "Orthodontic Case Management for Students",
+  "description": "Postgraduate Orthodontic Case Recording & Tracking (100% Offline)",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0f172a",

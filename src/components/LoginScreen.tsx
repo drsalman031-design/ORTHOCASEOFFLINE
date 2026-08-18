@@ -199,16 +199,23 @@ export const LoginScreen: React.FC<LoginScreenProps> = React.memo(({ onLoginSucc
         <div className="bg-white border border-slate-200/90 rounded-3xl p-6 sm:p-8 shadow-[0_12px_36px_rgba(15,23,42,0.06)] space-y-6">
           
           {/* HEADER: APP ICON & TITLE */}
-          <div className="text-center space-y-2">
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#0D52D6] to-[#1E40AF] flex items-center justify-center text-white mx-auto shadow-md shadow-blue-500/25 ring-4 ring-blue-50">
-              <ToothIcon className="w-8 h-8 text-white" />
+          <div className="text-center space-y-3">
+            <div className="relative mx-auto w-24 h-24 sm:w-28 sm:h-28 rounded-3xl overflow-hidden shadow-xl ring-4 ring-slate-100">
+              <img
+                src="/app-logo.jpg"
+                alt="OrthoCase Launch Logo"
+                className="w-full h-full object-cover object-center"
+              />
             </div>
             <div>
-              <h1 className="text-2xl font-black tracking-tight text-slate-900">
-                Ortho Case
+              <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-[#071B49]">
+                OrthoCase
               </h1>
-              <p className="text-xs font-medium text-slate-500 max-w-xs mx-auto mt-0.5 leading-snug">
-                Clinical Case Documentation & Academic Approval Portal
+              <p className="text-sm font-semibold text-slate-700 max-w-xs mx-auto mt-0.5 tracking-wide">
+                Case Recording & Tracking
+              </p>
+              <p className="text-[11px] text-slate-400 font-medium mt-1">
+                Postgraduate Orthodontic Clinical Logbook
               </p>
             </div>
           </div>

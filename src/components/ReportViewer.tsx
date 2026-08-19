@@ -5,16 +5,10 @@ import {
   CheckCircle2,
   Users,
   RefreshCw,
-  ShieldCheck,
-  Lock,
-  Archive,
-  Layers,
-  Sparkles,
 } from 'lucide-react';
 import { PatientRecord, StudentProfile } from '../types';
 import { generatePatientPDF } from '../lib/pdfGenerator';
 import { getDepartmentConfig } from '../lib/authContext';
-import { exportSinglePatientVault } from '../lib/db';
 
 interface ReportViewerProps {
   patients: PatientRecord[];
@@ -32,8 +26,6 @@ export const ReportViewer: React.FC<ReportViewerProps> = ({
     selectedPatientId || (activePatients.length > 0 ? activePatients[0].id : '')
   );
   const [isGenerating, setIsGenerating] = useState(false);
-  const [isExportingVault, setIsExportingVault] = useState(false);
-  const [vaultSuccessMsg, setVaultSuccessMsg] = useState<string | null>(null);
 
   const selectedPatient = patients.find((p) => p.id === selectedId);
   const deptConfig = getDepartmentConfig();
@@ -51,37 +43,6 @@ export const ReportViewer: React.FC<ReportViewerProps> = ({
     }
   };
 
-  const handleExportSingleVault = async () => {
-    if (!selectedPatient) return;
-    setIsExportingVault(true);
-    setVaultSuccessMsg(null);
-    try {
-      const defaultPass = prompt('Enter a passphrase to encrypt this .orthocase vault:', 'OrthoCase2026!') || 'OrthoCase2026!';
-      const vaultData = await exportSinglePatientVault(selectedPatient.id, defaultPass);
-      const blob = new Blob([vaultData], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const safeName = (selectedPatient.name || 'Patient').replace(/[^a-zA-Z0-9_-]/g, '_');
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${safeName}_${selectedPatient.patientId || 'Case'}_Backup.orthocase`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-      setVaultSuccessMsg('Encrypted .orthocase vault exported successfully! Keep this file safe for instant disaster recovery.');
-      setTimeout(() => setVaultSuccessMsg(null), 5000);
-    } catch (err: any) {
-      alert(`Vault export failed: ${err.message || err}`);
-    } finally {
-      setIsExportingVault(false);
-    }
-  };
-
-  const handleDualExport = async () => {
-    handleDownloadSinglePDF();
-    await handleExportSingleVault();
-  };
-
   return (
     <div className="space-y-4 pb-6">
       {/* Page Header */}
@@ -91,9 +52,9 @@ export const ReportViewer: React.FC<ReportViewerProps> = ({
             <FileText className="w-5 h-5" />
           </div>
           <div>
-            <h2 className="text-lg font-bold text-white">PDF Case Presentation & Encrypted Backup</h2>
+            <h2 className="text-lg font-bold text-white">PDF Case Presentation Generator</h2>
             <p className="text-xs text-slate-300">
-              100% Offline 49-Slide PDF compilation and AES-GCM-256 .orthocase vault export
+              100% Offline 49-Slide Comprehensive Orthodontic PDF Compilation
             </p>
           </div>
         </div>
@@ -150,66 +111,32 @@ export const ReportViewer: React.FC<ReportViewerProps> = ({
                   </div>
                 </div>
 
-                {/* Primary Action Buttons: Dual Export Toolbar */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-2">
+                {/* Primary Action Button: PDF Compilation */}
+                <div className="pt-2 flex justify-center items-center">
                   <button
                     onClick={handleDownloadSinglePDF}
                     disabled={isGenerating}
-                    className="flex items-center justify-center gap-2 bg-teal-600 hover:bg-teal-700 disabled:bg-teal-400 text-white px-4 py-2.5 rounded-xl text-xs font-bold shadow-md shadow-teal-900/10 transition cursor-pointer"
+                    className="w-full sm:w-auto min-w-[220px] flex items-center justify-center gap-2 bg-teal-600 hover:bg-teal-700 disabled:bg-teal-400 text-white px-6 py-3 rounded-xl text-xs font-bold shadow-md shadow-teal-900/10 transition cursor-pointer"
                   >
                     {isGenerating ? (
                       <>
                         <RefreshCw className="w-4 h-4 animate-spin" />
-                        <span>Compiling 49 Slides...</span>
+                        <span>Compiling PDF...</span>
                       </>
                     ) : (
                       <>
                         <Download className="w-4 h-4" />
-                        <span>1. Download 49-Slide PDF</span>
+                        <span>Download PDF</span>
                       </>
                     )}
-                  </button>
-
-                  <button
-                    onClick={handleExportSingleVault}
-                    disabled={isExportingVault}
-                    className="flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-700 dark:bg-slate-700 dark:hover:bg-slate-600 text-white px-4 py-2.5 rounded-xl text-xs font-bold shadow-md transition cursor-pointer"
-                  >
-                    {isExportingVault ? (
-                      <>
-                        <RefreshCw className="w-4 h-4 animate-spin" />
-                        <span>Encrypting Vault...</span>
-                      </>
-                    ) : (
-                      <>
-                        <ShieldCheck className="w-4 h-4 text-teal-400" />
-                        <span>2. Export .orthocase Vault</span>
-                      </>
-                    )}
-                  </button>
-
-                  <button
-                    onClick={handleDualExport}
-                    disabled={isGenerating || isExportingVault}
-                    className="flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-xl text-xs font-bold shadow-md shadow-emerald-900/10 transition cursor-pointer"
-                  >
-                    <Layers className="w-4 h-4" />
-                    <span>Dual Export (PDF + Vault)</span>
                   </button>
                 </div>
-
-                {vaultSuccessMsg && (
-                  <div className="p-3 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 rounded-xl text-xs text-emerald-800 dark:text-emerald-300 flex items-center gap-2 animate-in fade-in">
-                    <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
-                    <span>{vaultSuccessMsg}</span>
-                  </div>
-                )}
               </div>
 
               {/* Case Summary Card */}
               <div className="bg-slate-50 dark:bg-slate-800/60 p-4 rounded-xl border border-slate-200 dark:border-slate-700 space-y-3 text-xs text-slate-700 dark:text-slate-300">
                 <div className="font-bold text-slate-900 dark:text-white flex items-center justify-between text-sm">
-                  <span>Report Contents Included in PDF & Encrypted Vault:</span>
+                  <span>Report Contents Included in PDF Presentation:</span>
                   <span className="text-[11px] font-medium text-slate-500">
                     Dept Email: {deptConfig.deptGmailId}
                   </span>

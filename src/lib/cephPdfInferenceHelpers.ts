@@ -50,188 +50,199 @@ export function buildSheet1Payload(
   getStageVal: (field: any) => any
 ): CephSheetPayload {
   const isMale = patientGender === 'Male';
-  const midLowerVal = findCephVal(compCeph.mid_lower_face_ht, 45);
-  const softTissueVertProp = findCephVal(compCeph.soft_tissue_vert_prop, 33.3);
-  const snGoGnVal = findCephVal(compCeph.sn_go_gn, getStageVal(steinerP?.mandibularPlaneAngle), 32);
-  const fmaVal = findCephVal(compCeph.fma, getStageVal(stP?.fmpa), getStageVal(downsP?.mandibularPlaneAngle), getStageVal(mcnamaraP?.mandibularPlaneAngle), 25);
-  const jarabakVal = findCephVal(compCeph.jarabak_ratio, 63.5);
-  const bjorkVal = findCephVal(compCeph.bjork_sum, 396);
-  const saddleVal = findCephVal(compCeph.saddle_angle, 123);
-  const articularVal = findCephVal(compCeph.articular_angle, 143);
-  const uGonialVal = findCephVal(compCeph.u_gonial_angle, 54);
-  const lGonialVal = findCephVal(compCeph.l_gonial_angle, 76);
-  const yaxisSnVal = findCephVal(compCeph.yaxis_ns_gn, getStageVal(downsP?.yAxis), 59);
-  const yaxisFhVal = findCephVal(compCeph.yaxis_fh_s_gn, 59);
-  const ramusHeightVal = findCephVal(compCeph.ramus_height_ar_go, getStageVal(cogsP?.ramusHeightArGo), getStageVal(stP?.ascendingRamusLength), 49);
-  const basalPlaneVal = findCephVal(compCeph.basal_plane_angle, getStageVal(stP?.basalAngle), 25);
-  const occNfVal = findCephVal(compCeph.occlusal_to_nf, 14);
-  const occMpVal = findCephVal(compCeph.occlusal_to_mp, 14);
-  const vertMaxPlacementVal = findCephVal(compCeph.vert_max_placement, 56);
+  const midLowerVal = findCephVal(compCeph?.mid_lower_face_ht);
+  const softTissueVertProp = findCephVal(compCeph?.soft_tissue_vert_prop);
+  const snGoGnVal = findCephVal(compCeph?.sn_go_gn, getStageVal(steinerP?.mandibularPlaneAngle));
+  const fmaVal = findCephVal(compCeph?.fma, getStageVal(stP?.fmpa), getStageVal(downsP?.mandibularPlaneAngle), getStageVal(mcnamaraP?.mandibularPlaneAngle));
+  const jarabakVal = findCephVal(compCeph?.jarabak_ratio);
+  const bjorkVal = findCephVal(compCeph?.bjork_sum);
+  const saddleVal = findCephVal(compCeph?.saddle_angle);
+  const articularVal = findCephVal(compCeph?.articular_angle);
+  const uGonialVal = findCephVal(compCeph?.u_gonial_angle);
+  const lGonialVal = findCephVal(compCeph?.l_gonial_angle);
+  const yaxisSnVal = findCephVal(compCeph?.yaxis_ns_gn, getStageVal(downsP?.yAxis));
+  const yaxisFhVal = findCephVal(compCeph?.yaxis_fh_s_gn);
+  const ramusHeightVal = findCephVal(compCeph?.ramus_height_ar_go, getStageVal(cogsP?.ramusHeightArGo), getStageVal(stP?.ascendingRamusLength));
+  const basalPlaneVal = findCephVal(compCeph?.basal_plane_angle, getStageVal(stP?.basalAngle));
+  const occNfVal = findCephVal(compCeph?.occlusal_to_nf);
+  const occMpVal = findCephVal(compCeph?.occlusal_to_mp);
+  const vertMaxPlacementVal = findCephVal(compCeph?.vert_max_placement);
   const nAnsNormText = isMale ? '60.0 ± 4.0 mm' : '55.0 ± 2.0 mm';
-  const nAnsDefault = isMale ? 60 : 55;
-  const nAnsVal = findCephVal(compCeph.nasion_to_ans, getStageVal(cogsP?.nAns), nAnsDefault);
-  const maxRotationVal = findCephVal(compCeph.maxillary_rotation, 8.0);
+  const nAnsVal = findCephVal(compCeph?.nasion_to_ans, getStageVal(cogsP?.nAns));
+  const maxRotationVal = findCephVal(compCeph?.maxillary_rotation);
 
   // Compute Ramus Compensation Status
-  const isCompensatedByRamus = (fmaVal !== null && fmaVal > 28 && ramusHeightVal !== null && ramusHeightVal >= 50) || (jarabakVal !== null && jarabakVal >= 63);
+  const isCompensatedByRamus = ramusHeightVal !== null
+    ? ((fmaVal !== null && fmaVal > 28 && ramusHeightVal >= 50) || (jarabakVal !== null && jarabakVal >= 63))
+    : null;
 
   // Determine Divergence of Jaw Bases Sub-classification
-  let divergenceSubclass = 'Balanced / Parallel Jaw Bases';
-  if (compCeph.anterior_divergent || compCeph.divergence_subclassification === 'anterior_divergent' || (fmaVal && fmaVal > 29 && jarabakVal && jarabakVal < 62)) {
+  let divergenceSubclass = 'Pending Assessment';
+  if (compCeph?.anterior_divergent || compCeph?.divergence_subclassification === 'anterior_divergent' || (fmaVal && fmaVal > 29 && jarabakVal && jarabakVal < 62)) {
     divergenceSubclass = 'a) Anterior Divergent (Open Bite / High Mandibular Plane)';
-  } else if (compCeph.anterior_convergent || compCeph.divergence_subclassification === 'anterior_convergent' || (fmaVal && fmaVal < 21 && jarabakVal && jarabakVal > 65)) {
+  } else if (compCeph?.anterior_convergent || compCeph?.divergence_subclassification === 'anterior_convergent' || (fmaVal && fmaVal < 21 && jarabakVal && jarabakVal > 65)) {
     divergenceSubclass = 'b) Anterior Convergent (Deep Bite / Flat Mandibular Plane)';
-  } else if (compCeph.upward_rotation_max_mand || compCeph.divergence_subclassification === 'upward_rotation_max_mand' || (maxRotationVal && maxRotationVal < 5)) {
+  } else if (compCeph?.upward_rotation_max_mand || compCeph?.divergence_subclassification === 'upward_rotation_max_mand' || (maxRotationVal && maxRotationVal < 5)) {
     divergenceSubclass = 'c) Upward Anterior Rotation of Maxilla & Mandible';
-  } else if (compCeph.downward_rotation_max_mand || compCeph.divergence_subclassification === 'downward_rotation_max_mand' || (maxRotationVal && maxRotationVal > 11)) {
+  } else if (compCeph?.downward_rotation_max_mand || compCeph?.divergence_subclassification === 'downward_rotation_max_mand' || (maxRotationVal && maxRotationVal > 11)) {
     divergenceSubclass = 'd) Downward Anterior Rotation of Maxilla & Mandible';
+  } else if (fmaVal !== null || jarabakVal !== null) {
+    divergenceSubclass = 'Balanced / Parallel Jaw Bases';
   }
 
   const rows: (string | number)[][] = [
     [
       '1. Mid / Lower Face Height Proportion',
-      midLowerVal !== null ? `${midLowerVal.toFixed(1)}%` : '45.0%',
+      midLowerVal !== null ? `${midLowerVal.toFixed(1)}%` : '—',
       '45:55 (45.0% ± 3.0%)',
-      midLowerVal !== null && midLowerVal > 48 ? 'Increased Lower Face Height (Vertical Excess)' : midLowerVal !== null && midLowerVal < 42 ? 'Decreased Lower Face Height (Deep Bite Tendency)' : 'Harmonious Mid-to-Lower Facial Proportion',
+      midLowerVal !== null ? (midLowerVal > 48 ? 'Increased Lower Face Height (Vertical Excess)' : midLowerVal < 42 ? 'Decreased Lower Face Height (Deep Bite Tendency)' : 'Harmonious Mid-to-Lower Facial Proportion') : 'Not Recorded',
     ],
     [
       '2. Soft Tissue Vertical Proportions',
-      softTissueVertProp !== null ? `1:${(100 / softTissueVertProp - 1).toFixed(1)} (${softTissueVertProp.toFixed(0)}%)` : '1:2 (33.3%)',
+      softTissueVertProp !== null ? `1:${(100 / softTissueVertProp - 1).toFixed(1)} (${softTissueVertProp.toFixed(0)}%)` : '—',
       'Sn-Stm : Stm-Me = 1:2 (30% : 70%)',
-      softTissueVertProp !== null && softTissueVertProp > 36 ? 'Elongated Upper Lip Philtrum' : softTissueVertProp !== null && softTissueVertProp < 28 ? 'Short Upper Lip / Lower Lip & Chin Dominance' : 'Balanced Soft Tissue Vertical Thirds',
+      softTissueVertProp !== null ? (softTissueVertProp > 36 ? 'Elongated Upper Lip Philtrum' : softTissueVertProp < 28 ? 'Short Upper Lip / Lower Lip & Chin Dominance' : 'Balanced Soft Tissue Vertical Thirds') : 'Not Recorded',
     ],
     [
       '3. SN-GoGn Angle (Mandibular Plane)',
-      snGoGnVal !== null ? `${snGoGnVal.toFixed(1)}°` : '32.0°',
+      snGoGnVal !== null ? `${snGoGnVal.toFixed(1)}°` : '—',
       '32.0° ± 4.0° (28.0° - 36.0°)',
-      snGoGnVal !== null && snGoGnVal > 36 ? 'Hyperdivergent / Steep Mandibular Plane Incline' : snGoGnVal !== null && snGoGnVal < 28 ? 'Hypodivergent / Flat Mandibular Plane Incline' : 'Normal Mandibular Plane Inclination',
+      snGoGnVal !== null ? (snGoGnVal > 36 ? 'Hyperdivergent / Steep Mandibular Plane Incline' : snGoGnVal < 28 ? 'Hypodivergent / Flat Mandibular Plane Incline' : 'Normal Mandibular Plane Inclination') : 'Not Recorded',
     ],
     [
       '4. FMA / FMPA Angle',
-      fmaVal !== null ? `${fmaVal.toFixed(1)}°` : '25.0°',
+      fmaVal !== null ? `${fmaVal.toFixed(1)}°` : '—',
       '25.0° ± 4.0° (21.0° - 29.0°)',
-      fmaVal !== null && fmaVal > 29 ? 'Hyperdivergent / Clockwise Growth Pattern' : fmaVal !== null && fmaVal < 21 ? 'Hypodivergent / Counter-Clockwise Growth' : 'Normodivergent Balanced Vertical Pattern',
+      fmaVal !== null ? (fmaVal > 29 ? 'Hyperdivergent / Clockwise Growth Pattern' : fmaVal < 21 ? 'Hypodivergent / Counter-Clockwise Growth' : 'Normodivergent Balanced Vertical Pattern') : 'Not Recorded',
     ],
     [
       '5. Jarabak\'s Ratio (S-Go / N-Me %)',
-      jarabakVal !== null ? `${jarabakVal.toFixed(1)}%` : '63.5%',
+      jarabakVal !== null ? `${jarabakVal.toFixed(1)}%` : '—',
       '63.5% (62.0% - 65.0%)',
-      jarabakVal !== null && jarabakVal < 62 ? 'Posterior Rotator / Clockwise (<62%)' : jarabakVal !== null && jarabakVal > 65 ? 'Anterior Rotator / Counter-Clockwise (>65%)' : 'Balanced Jarabak Height Equilibrium',
+      jarabakVal !== null ? (jarabakVal < 62 ? 'Posterior Rotator / Clockwise (<62%)' : jarabakVal > 65 ? 'Anterior Rotator / Counter-Clockwise (>65%)' : 'Balanced Jarabak Height Equilibrium') : 'Not Recorded',
     ],
     [
       '6. Björk\'s Sum of 3 Angles',
-      bjorkVal !== null ? `${bjorkVal.toFixed(1)}°` : '396.0°',
+      bjorkVal !== null ? `${bjorkVal.toFixed(1)}°` : '—',
       '396.0° ± 6.0° (390.0° - 402.0°)',
-      bjorkVal !== null && bjorkVal > 402 ? 'Clockwise Mandibular Opening (>402°)' : bjorkVal !== null && bjorkVal < 390 ? 'Counter-Clockwise Closing (<390°)' : 'Neutral Structural Polygon Equilibrium',
+      bjorkVal !== null ? (bjorkVal > 402 ? 'Clockwise Mandibular Opening (>402°)' : bjorkVal < 390 ? 'Counter-Clockwise Closing (<390°)' : 'Neutral Structural Polygon Equilibrium') : 'Not Recorded',
     ],
     [
       '7. Saddle Angle (N-S-Ar)',
-      saddleVal !== null ? `${saddleVal.toFixed(1)}°` : '123.0°',
+      saddleVal !== null ? `${saddleVal.toFixed(1)}°` : '—',
       '123.0° ± 5.0° (118.0° - 128.0°)',
-      saddleVal !== null && saddleVal > 128 ? 'Posterior Condylar Position (Class II Risk)' : saddleVal !== null && saddleVal < 118 ? 'Anterior Condylar Position (Class III Risk)' : 'Normal Cranial Base Flexure Angle',
+      saddleVal !== null ? (saddleVal > 128 ? 'Posterior Condylar Position (Class II Risk)' : saddleVal < 118 ? 'Anterior Condylar Position (Class III Risk)' : 'Normal Cranial Base Flexure Angle') : 'Not Recorded',
     ],
     [
       '8. Articular Angle (S-Ar-Go)',
-      articularVal !== null ? `${articularVal.toFixed(1)}°` : '143.0°',
+      articularVal !== null ? `${articularVal.toFixed(1)}°` : '—',
       '143.0° ± 6.0° (137.0° - 149.0°)',
-      articularVal !== null && articularVal > 149 ? 'Mandibular Retrognathism / Clockwise Vector' : articularVal !== null && articularVal < 137 ? 'Mandibular Prognathism / Counter-Clockwise' : 'Normal Articular Angle Relationship',
+      articularVal !== null ? (articularVal > 149 ? 'Mandibular Retrognathism / Clockwise Vector' : articularVal < 137 ? 'Mandibular Prognathism / Counter-Clockwise' : 'Normal Articular Angle Relationship') : 'Not Recorded',
     ],
     [
       '9. Upper Gonial Angle (Ar-Go-N)',
-      uGonialVal !== null ? `${uGonialVal.toFixed(1)}°` : '54.0°',
+      uGonialVal !== null ? `${uGonialVal.toFixed(1)}°` : '—',
       '54.0° ± 2.0° (52.0° - 55.0°)',
-      uGonialVal !== null && uGonialVal > 55 ? 'Posterior Ramal Incline / Mandibular Backward Tilt' : uGonialVal !== null && uGonialVal < 52 ? 'Upright Ramus / Forward Mandibular Projection' : 'Normal Upper Gonial Incline',
+      uGonialVal !== null ? (uGonialVal > 55 ? 'Posterior Ramal Incline / Mandibular Backward Tilt' : uGonialVal < 52 ? 'Upright Ramus / Forward Mandibular Projection' : 'Normal Upper Gonial Incline') : 'Not Recorded',
     ],
     [
       '10. Lower Gonial Angle (N-Go-Me)',
-      lGonialVal !== null ? `${lGonialVal.toFixed(1)}°` : '76.0°',
+      lGonialVal !== null ? `${lGonialVal.toFixed(1)}°` : '—',
       '76.0° ± 3.0° (70.0° - 75.0°)',
-      lGonialVal !== null && lGonialVal > 75 ? 'Downward Mandibular Growth / Open Bite Risk' : lGonialVal !== null && lGonialVal < 70 ? 'Horizontal Mandibular Growth / Deep Bite' : 'Normal Mandibular Body Divergence',
+      lGonialVal !== null ? (lGonialVal > 75 ? 'Downward Mandibular Growth / Open Bite Risk' : lGonialVal < 70 ? 'Horizontal Mandibular Growth / Deep Bite' : 'Normal Mandibular Body Divergence') : 'Not Recorded',
     ],
     [
       '11. Y-Axis to SN (N-S-Gn)',
-      yaxisSnVal !== null ? `${yaxisSnVal.toFixed(1)}°` : '59.0°',
+      yaxisSnVal !== null ? `${yaxisSnVal.toFixed(1)}°` : '—',
       '66.0° ± 3.0° (63.0° - 69.0°)',
-      yaxisSnVal !== null && yaxisSnVal > 69 ? 'Downward & Backward Growth Trajectory' : yaxisSnVal !== null && yaxisSnVal < 63 ? 'Horizontal / Forward Growth Trajectory' : 'Harmonious Growth Vector Axis',
+      yaxisSnVal !== null ? (yaxisSnVal > 69 ? 'Downward & Backward Growth Trajectory' : yaxisSnVal < 63 ? 'Horizontal / Forward Growth Trajectory' : 'Harmonious Growth Vector Axis') : 'Not Recorded',
     ],
     [
       '12. Y-Axis to FH (S-Gn to FH)',
-      yaxisFhVal !== null ? `${yaxisFhVal.toFixed(1)}°` : '59.0°',
+      yaxisFhVal !== null ? `${yaxisFhVal.toFixed(1)}°` : '—',
       '59.0° ± 3.0° (56.0° - 62.0°)',
-      yaxisFhVal !== null && yaxisFhVal > 62 ? 'Clockwise Mandibular Incline' : yaxisFhVal !== null && yaxisFhVal < 56 ? 'Counter-Clockwise Mandibular Incline' : 'Normal Frankfort-Gn Growth Vector',
+      yaxisFhVal !== null ? (yaxisFhVal > 62 ? 'Clockwise Mandibular Incline' : yaxisFhVal < 56 ? 'Counter-Clockwise Mandibular Incline' : 'Normal Frankfort-Gn Growth Vector') : 'Not Recorded',
     ],
     [
       '13. Ramus Height & Compensation (Ar-Go)',
-      ramusHeightVal !== null ? `${ramusHeightVal.toFixed(1)} mm` : '49.0 mm',
+      ramusHeightVal !== null ? `${ramusHeightVal.toFixed(1)} mm` : '—',
       '49.0 mm (46.0 - 52.0 mm)',
-      isCompensatedByRamus ? 'Compensated by Adequate/Robust Ramus Height' : 'Uncompensated / Short Ramus (Vertical Risk)',
+      ramusHeightVal !== null ? (isCompensatedByRamus ? 'Compensated by Adequate/Robust Ramus Height' : 'Uncompensated / Short Ramus (Vertical Risk)') : 'Not Recorded',
     ],
     [
       '14. Basal Plane Angle (PP to MP)',
-      basalPlaneVal !== null ? `${basalPlaneVal.toFixed(1)}°` : '25.0°',
+      basalPlaneVal !== null ? `${basalPlaneVal.toFixed(1)}°` : '—',
       '25.0° ± 5.0° (20.0° - 30.0°)',
-      basalPlaneVal !== null && basalPlaneVal > 30 ? 'Increased Inter-Basal Divergence' : basalPlaneVal !== null && basalPlaneVal < 20 ? 'Convergent Basal Planes / Deep Bite' : 'Normal Inter-Basal Plane Angle',
+      basalPlaneVal !== null ? (basalPlaneVal > 30 ? 'Increased Inter-Basal Divergence' : basalPlaneVal < 20 ? 'Convergent Basal Planes / Deep Bite' : 'Normal Inter-Basal Plane Angle') : 'Not Recorded',
     ],
     [
       '15. Occlusal Plane to NF (PP)',
-      occNfVal !== null ? `${occNfVal.toFixed(1)}°` : '14.0°',
+      occNfVal !== null ? `${occNfVal.toFixed(1)}°` : '—',
       '14.0° ± 4.0° (10.0° - 18.0°)',
-      occNfVal !== null && occNfVal > 18 ? 'Steep Maxillary Occlusal Plane Incline' : occNfVal !== null && occNfVal < 10 ? 'Flat Maxillary Occlusal Plane Incline' : 'Harmonious Palatal-Occlusal Relation',
+      occNfVal !== null ? (occNfVal > 18 ? 'Steep Maxillary Occlusal Plane Incline' : occNfVal < 10 ? 'Flat Maxillary Occlusal Plane Incline' : 'Harmonious Palatal-Occlusal Relation') : 'Not Recorded',
     ],
     [
       '16. Occlusal Plane to MP',
-      occMpVal !== null ? `${occMpVal.toFixed(1)}°` : '14.0°',
+      occMpVal !== null ? `${occMpVal.toFixed(1)}°` : '—',
       '14.0° ± 4.0° (10.0° - 18.0°)',
-      occMpVal !== null && occMpVal > 18 ? 'Increased Mandibular Occlusal Divergence' : occMpVal !== null && occMpVal < 10 ? 'Decreased Mandibular Occlusal Divergence' : 'Normal Mandibular-Occlusal Incline',
+      occMpVal !== null ? (occMpVal > 18 ? 'Increased Mandibular Occlusal Divergence' : occMpVal < 10 ? 'Decreased Mandibular Occlusal Divergence' : 'Normal Mandibular-Occlusal Incline') : 'Not Recorded',
     ],
     [
       '17. Vertical Maxillary Placement',
-      vertMaxPlacementVal !== null ? `${vertMaxPlacementVal.toFixed(1)} mm` : '56.0 mm',
+      vertMaxPlacementVal !== null ? `${vertMaxPlacementVal.toFixed(1)} mm` : '—',
       '56.0 mm (53.0 - 60.0 mm)',
-      vertMaxPlacementVal !== null && vertMaxPlacementVal > 60 ? 'Vertical Maxillary Excess (VME Tendency)' : vertMaxPlacementVal !== null && vertMaxPlacementVal < 53 ? 'Vertical Maxillary Deficiency (VMD)' : 'Ideal Vertical Spatial Maxillary Position',
+      vertMaxPlacementVal !== null ? (vertMaxPlacementVal > 60 ? 'Vertical Maxillary Excess (VME Tendency)' : vertMaxPlacementVal < 53 ? 'Vertical Maxillary Deficiency (VMD)' : 'Ideal Vertical Spatial Maxillary Position') : 'Not Recorded',
     ],
     [
       '18. Nasion to ANS (Upper Face Height)',
-      nAnsVal !== null ? `${nAnsVal.toFixed(1)} mm` : `${nAnsDefault}.0 mm`,
+      nAnsVal !== null ? `${nAnsVal.toFixed(1)} mm` : '—',
       nAnsNormText,
-      nAnsVal !== null && nAnsVal > (isMale ? 64 : 57) ? 'Elongated Upper Anterior Facial Height' : nAnsVal !== null && nAnsVal < (isMale ? 56 : 53) ? 'Short Upper Anterior Facial Height' : 'Normal Upper Face Height Dimension',
+      nAnsVal !== null ? (nAnsVal > (isMale ? 64 : 57) ? 'Elongated Upper Anterior Facial Height' : nAnsVal < (isMale ? 56 : 53) ? 'Short Upper Anterior Facial Height' : 'Normal Upper Face Height Dimension') : 'Not Recorded',
     ],
     [
       '19. Maxillary Rotation (Palatal Incline)',
-      maxRotationVal !== null ? `${maxRotationVal.toFixed(1)}°` : '8.0°',
+      maxRotationVal !== null ? `${maxRotationVal.toFixed(1)}°` : '—',
       '8.0° ± 3.0° (5.0° - 11.0° to SN)',
-      maxRotationVal !== null && maxRotationVal > 11 ? 'Downward Anterior Tipping of Maxilla' : maxRotationVal !== null && maxRotationVal < 5 ? 'Upward Anterior Tipping of Maxilla' : 'Normal Maxillary Palatal Orientation',
+      maxRotationVal !== null ? (maxRotationVal > 11 ? 'Downward Anterior Tipping of Maxilla' : maxRotationVal < 5 ? 'Upward Anterior Tipping of Maxilla' : 'Normal Maxillary Palatal Orientation') : 'Not Recorded',
     ],
     [
       '20. Divergence of Jaw Bases Sub-classification',
-      divergenceSubclass.split(' (')[0],
+      divergenceSubclass !== 'Pending Assessment' ? divergenceSubclass.split(' (')[0] : '—',
       'Parallel / Harmonious Divergence',
-      divergenceSubclass,
+      divergenceSubclass !== 'Pending Assessment' ? divergenceSubclass : 'Not Recorded',
     ],
   ];
 
-  const fmaStatus = fmaVal && fmaVal > 29 ? 'Hyperdivergent' : fmaVal && fmaVal < 21 ? 'Hypodivergent' : 'Normodivergent';
-  const jarabakStatus = jarabakVal && jarabakVal < 62 ? 'Posterior Rotator' : jarabakVal && jarabakVal > 65 ? 'Anterior Rotator' : 'Balanced';
+  const fmaStatus = fmaVal ? (fmaVal > 29 ? 'Hyperdivergent' : fmaVal < 21 ? 'Hypodivergent' : 'Normodivergent') : 'Pending';
+  const jarabakStatus = jarabakVal ? (jarabakVal < 62 ? 'Posterior Rotator' : jarabakVal > 65 ? 'Anterior Rotator' : 'Balanced') : 'Pending';
 
   const inferencePoints: SheetInferencePoint[] = [
     {
       title: 'Growth Pattern & Divergence Vector',
-      finding: `${fmaStatus} skeletal pattern (FMA: ${fmaVal?.toFixed(1)}°, SN-GoGn: ${snGoGnVal?.toFixed(1)}°) with ${fmaVal && fmaVal > 29 ? 'clockwise mandibular rotation tendency and elevated vertical growth vector' : fmaVal && fmaVal < 21 ? 'counter-clockwise mandibular rotation tendency and strong horizontal growth vector' : 'balanced vertical skeletal proportions'}.`,
-      badge: fmaStatus,
+      finding: fmaVal !== null || snGoGnVal !== null
+        ? `${fmaStatus} skeletal pattern (FMA: ${fmaVal?.toFixed(1) ?? '—'}°, SN-GoGn: ${snGoGnVal?.toFixed(1) ?? '—'}°) with ${fmaVal && fmaVal > 29 ? 'clockwise mandibular rotation tendency and elevated vertical growth vector' : fmaVal && fmaVal < 21 ? 'counter-clockwise mandibular rotation tendency and strong horizontal growth vector' : 'balanced vertical skeletal proportions'}.`
+        : 'Vertical skeletal divergence and mandibular plane angle measurements pending.',
+      badge: fmaStatus !== 'Pending' ? fmaStatus : undefined,
       badgeColor: fmaStatus === 'Hyperdivergent' ? 'bg-rose-500/20 text-rose-300 border-rose-500/40' : fmaStatus === 'Hypodivergent' ? 'bg-blue-500/20 text-blue-300 border-blue-500/40' : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40',
     },
     {
       title: 'Rotational Vector & Jarabak Ratio',
-      finding: `Jarabak Ratio of ${jarabakVal?.toFixed(1)}% indicates a ${jarabakStatus} facial growth dynamic with Björk Sum of ${bjorkVal?.toFixed(1)}° (${bjorkVal && bjorkVal > 402 ? 'opening structural polygon predisposing to anterior open bite' : bjorkVal && bjorkVal < 390 ? 'closing structural polygon predisposing to skeletal deep bite' : 'neutral structural equilibrium'}).`,
-      badge: jarabakStatus,
+      finding: jarabakVal !== null || bjorkVal !== null
+        ? `Jarabak Ratio of ${jarabakVal?.toFixed(1) ?? '—'}% indicates a ${jarabakStatus} facial growth dynamic with Björk Sum of ${bjorkVal?.toFixed(1) ?? '—'}° (${bjorkVal && bjorkVal > 402 ? 'opening structural polygon predisposing to anterior open bite' : bjorkVal && bjorkVal < 390 ? 'closing structural polygon predisposing to skeletal deep bite' : 'neutral structural equilibrium'}).`
+        : 'Jarabak facial height ratio and Björk polygon sum measurements pending.',
+      badge: jarabakStatus !== 'Pending' ? jarabakStatus : undefined,
     },
     {
       title: 'Cranial Base, Gonial Form & Ramus Compensation',
-      finding: `Saddle Angle (${saddleVal?.toFixed(1)}°) and Articular Angle (${articularVal?.toFixed(1)}°) establish ${saddleVal && saddleVal > 128 ? 'posterior glenoid fossa positioning' : saddleVal && saddleVal < 118 ? 'anterior glenoid fossa positioning' : 'harmonious TMJ fossa position'} with lower gonial divergence of ${lGonialVal?.toFixed(1)}°. Ramus Height (${ramusHeightVal?.toFixed(1)} mm) is ${isCompensatedByRamus ? 'sufficient to compensate mandibular plane angle' : 'insufficient to buffer hyperdivergent tendency'}.`,
+      finding: saddleVal !== null || articularVal !== null || lGonialVal !== null
+        ? `Saddle Angle (${saddleVal?.toFixed(1) ?? '—'}°) and Articular Angle (${articularVal?.toFixed(1) ?? '—'}°) establish ${saddleVal && saddleVal > 128 ? 'posterior glenoid fossa positioning' : saddleVal && saddleVal < 118 ? 'anterior glenoid fossa positioning' : 'harmonious TMJ fossa position'} with lower gonial divergence of ${lGonialVal?.toFixed(1) ?? '—'}°. Ramus Height (${ramusHeightVal?.toFixed(1) ?? '—'} mm) is ${isCompensatedByRamus ? 'sufficient to compensate mandibular plane angle' : 'insufficient to buffer hyperdivergent tendency'}.`
+        : 'Cranial base flexure and gonial angle measurements pending.',
     },
     {
       title: 'Divergence of Jaw Bases Sub-classification',
-      finding: `Categorized as: ${divergenceSubclass}. Mid/Lower facial proportion of ${midLowerVal?.toFixed(1)}% with N-ANS of ${nAnsVal?.toFixed(1)} mm confirms ${fmaVal && fmaVal > 29 ? 'vertical excess requiring strict vertical anchor mechanics' : fmaVal && fmaVal < 21 ? 'vertical deficiency favorable for bite-opening mechanics' : 'harmonious vertical development'}.`,
+      finding: divergenceSubclass !== 'Pending Assessment'
+        ? `Categorized as: ${divergenceSubclass}. Mid/Lower facial proportion of ${midLowerVal?.toFixed(1) ?? '—'}% with N-ANS of ${nAnsVal?.toFixed(1) ?? '—'} mm confirms ${fmaVal && fmaVal > 29 ? 'vertical excess requiring strict vertical anchor mechanics' : fmaVal && fmaVal < 21 ? 'vertical deficiency favorable for bite-opening mechanics' : 'harmonious vertical development'}.`
+        : 'Divergence sub-classification pending complete cephalometric entry.',
     },
   ];
 
@@ -239,7 +250,9 @@ export function buildSheet1Payload(
     ? 'Maximum vertical control required: strictly avoid molar extrusion, consider TAD-supported molar intrusion, high-pull headgear / transpalatal arch, and avoid Class II elastics without vertical anchorage support.'
     : fmaVal && fmaVal < 21
     ? 'Deep bite correction favored: bite opening via controlled molar extrusion and leveling of Curve of Spee tolerated without adverse facial lengthening.'
-    : 'Maintain vertical equilibrium: standard leveling mechanics with light intermaxillary mechanics and moderate anchorage.';
+    : fmaVal !== null
+    ? 'Maintain vertical equilibrium: standard leveling mechanics with light intermaxillary mechanics and moderate anchorage.'
+    : undefined;
 
   return {
     slideTitle: '18C. Comprehensive Cephalometric Discrepancy (Sheet 1: Vertical Skeletal Relation & Divergence)',
@@ -334,22 +347,22 @@ export function buildSheet2Payload(
   patientAge?: number | string
 ): CephSheetPayload {
   const isMale = patientGender === 'Male';
-  const skeletalClass = compCeph.skeletal_class || (anbVal !== null ? (anbVal > 4 ? 'Class II' : anbVal < 0 ? 'Class III' : 'Class I') : 'Class I');
-  const skeletalSubtype = compCeph.skeletal_subtype || (anbVal !== null ? (anbVal > 4 ? 'Class II Div 1' : anbVal < 0 ? 'Class III Prognathic' : 'Class I Normal / Bimaxillary') : 'Class I Normal');
+  const skeletalClass = compCeph?.skeletal_class || (anbVal !== null ? (anbVal > 4 ? 'Class II' : anbVal < 0 ? 'Class III' : 'Class I') : 'Class I');
+  const skeletalSubtype = compCeph?.skeletal_subtype || (anbVal !== null ? (anbVal > 4 ? 'Class II Div 1' : anbVal < 0 ? 'Class III Prognathic' : 'Class I Normal / Bimaxillary') : 'Class I Normal');
 
   // Extract from dedicated sagittalVerticalInteractionAnalysis data structure or compCeph fallback
   const t1 = sagVertData?.table1Interaction;
   const t2 = sagVertData?.table2UpperIncisorExposure;
 
-  const unaffectedText = t1?.sagittalUnaffectedByVertical?.preRx || (compCeph.sagittal_unaffected ? 'Selected: Independent Base Relation' : 'Base relation independent of vertical vector');
-  const causedText = t1?.sagittalCausedByVertical?.preRx || (compCeph.sagittal_caused_by_vertical ? 'Selected: Rotational Origin' : 'Rotational divergence effect on AP base');
-  const worsenedText = t1?.sagittalWorsenedByVertical?.preRx || (compCeph.sagittal_worsened_by_vertical ? 'Selected: Vertical Plane Aggravation' : 'High angle / steep plane exacerbation');
-  const compensatedText = t1?.sagittalCompensatedByVertical?.preRx || (compCeph.sagittal_compensated ? 'Selected: Compensated / Masked' : 'Autorotation / dental compensation');
+  const unaffectedText = t1?.sagittalUnaffectedByVertical?.preRx || (compCeph?.sagittal_unaffected ? 'Selected: Independent Base Relation' : 'Base relation independent of vertical vector');
+  const causedText = t1?.sagittalCausedByVertical?.preRx || (compCeph?.sagittal_caused_by_vertical ? 'Selected: Rotational Origin' : 'Rotational divergence effect on AP base');
+  const worsenedText = t1?.sagittalWorsenedByVertical?.preRx || (compCeph?.sagittal_worsened_by_vertical ? 'Selected: Vertical Plane Aggravation' : 'High angle / steep plane exacerbation');
+  const compensatedText = t1?.sagittalCompensatedByVertical?.preRx || (compCeph?.sagittal_compensated ? 'Selected: Compensated / Masked' : 'Autorotation / dental compensation');
 
-  const uiRestVal = findCephVal(t2?.uiExposureRest?.preRx, compCeph.ui_exposure_rest, isMale ? 2.5 : 3.5);
-  const uiSmileVal = findCephVal(t2?.uiExposureSmile?.preRx, compCeph.ui_exposure_smile, 8.5);
-  const ansUiVal = findCephVal(t2?.ansToIncisor?.preRx, compCeph.ans_to_incisor, isMale ? 33.0 : 30.0);
-  const uLipLenVal = findCephVal(t2?.uLipLength?.preRx, compCeph.u_lip_length, isMale ? 22.0 : 20.0);
+  const uiRestVal = findCephVal(t2?.uiExposureRest?.preRx, compCeph?.ui_exposure_rest);
+  const uiSmileVal = findCephVal(t2?.uiExposureSmile?.preRx, compCeph?.ui_exposure_smile);
+  const ansUiVal = findCephVal(t2?.ansToIncisor?.preRx, compCeph?.ans_to_incisor);
+  const uLipLenVal = findCephVal(t2?.uLipLength?.preRx, compCeph?.u_lip_length);
 
   // Automated Differential Etiology Calculation
   const ansThreshold = isMale ? 36 : 33;
@@ -360,19 +373,27 @@ export function buildSheet2Payload(
 
   let calculatedEtiology = sagVertData?.excessExposureCause;
   if (!calculatedEtiology) {
-    if (!isExposureExcess) calculatedEtiology = 'Normal Incisor Exposure & Esthetic Smile Arc';
-    else if (isAnsExcess && isLipShort) calculatedEtiology = 'Combination: Vertical Skeletal Excess (VME) + Short Upper Lip';
-    else if (isAnsExcess) calculatedEtiology = 'Vertical Skeletal Excess (VME / Elongated Maxilla)';
-    else if (isLipShort) calculatedEtiology = 'Short Upper Lip Philtrum Incompetence';
-    else calculatedEtiology = 'Vertical Dental Excess (Incisor Extrusion)';
+    if (uiRestVal === null && uiSmileVal === null && ansUiVal === null && uLipLenVal === null) {
+      calculatedEtiology = 'Pending Examination';
+    } else if (!isExposureExcess) {
+      calculatedEtiology = 'Normal Incisor Exposure & Esthetic Smile Arc';
+    } else if (isAnsExcess && isLipShort) {
+      calculatedEtiology = 'Combination: Vertical Skeletal Excess (VME) + Short Upper Lip';
+    } else if (isAnsExcess) {
+      calculatedEtiology = 'Vertical Skeletal Excess (VME / Elongated Maxilla)';
+    } else if (isLipShort) {
+      calculatedEtiology = 'Short Upper Lip Philtrum Incompetence';
+    } else {
+      calculatedEtiology = 'Vertical Dental Excess (Incisor Extrusion)';
+    }
   }
 
   const palatalSupport = sagVertData?.palatalCortexSupport || 'Adequate';
   const symphysealSupport = sagVertData?.symphysealCortexSupport || 'Adequate';
   const symphysealLoc = sagVertData?.symphysealCortexLocation || 'Mandible';
 
-  const sagittalAlt = sagVertData?.sagittalAlterationNeeded || (anbVal && (anbVal > 4 || anbVal < 0) ? 'Needed' : 'Not Needed');
-  const verticalAlt = sagVertData?.verticalAlterationNeeded || (fmaVal && (fmaVal > 29 || fmaVal < 21) ? 'Needed' : 'Not Needed');
+  const sagittalAlt = sagVertData?.sagittalAlterationNeeded || (anbVal !== null && (anbVal > 4 || anbVal < 0) ? 'Needed' : 'Not Needed');
+  const verticalAlt = sagVertData?.verticalAlterationNeeded || (fmaVal !== null && (fmaVal > 29 || fmaVal < 21) ? 'Needed' : 'Not Needed');
   const skeletalAlt = sagVertData?.skeletalAlterationNeeded || (sagittalAlt === 'Needed' || verticalAlt === 'Needed' ? 'Needed' : 'Not Needed');
 
   const numericAge = typeof patientAge === 'number' ? patientAge : parseInt(String(patientAge || '14'), 10);
@@ -412,33 +433,33 @@ export function buildSheet2Payload(
     ],
     [
       '6. Upper Incisor Exposure at Rest',
-      uiRestVal !== null ? `${uiRestVal.toFixed(1)} mm` : (isMale ? '2.5 mm' : '3.5 mm'),
+      uiRestVal !== null ? `${uiRestVal.toFixed(1)} mm` : '—',
       isMale ? '2.0 - 4.0 mm (2.5 mm)' : '3.0 - 5.0 mm (3.5 mm)',
-      uiRestVal !== null && uiRestVal > 4.0 ? 'Excessive Resting Incisor Show (VME Risk)' : uiRestVal !== null && uiRestVal < 2.0 ? 'Deficient Resting Incisor Show' : 'Ideal Incisor Exposure at Rest',
+      uiRestVal !== null ? (uiRestVal > 4.0 ? 'Excessive Resting Incisor Show (VME Risk)' : uiRestVal < 2.0 ? 'Deficient Resting Incisor Show' : 'Ideal Incisor Exposure at Rest') : 'Not Recorded',
     ],
     [
       '7. Upper Incisor Exposure in Smile',
-      uiSmileVal !== null ? `${uiSmileVal.toFixed(1)} mm` : '8.5 mm',
+      uiSmileVal !== null ? `${uiSmileVal.toFixed(1)} mm` : '—',
       '8.0 - 10.0 mm (0-2 mm gingival show)',
-      uiSmileVal !== null && uiSmileVal > 10.0 ? 'Gummy Smile / Excessive Gingival Display' : uiSmileVal !== null && uiSmileVal < 7.0 ? 'Reduced Smile Incisor Display' : 'Harmonious Consonant Smile Arc Display',
+      uiSmileVal !== null ? (uiSmileVal > 10.0 ? 'Gummy Smile / Excessive Gingival Display' : uiSmileVal < 7.0 ? 'Reduced Smile Incisor Display' : 'Harmonious Consonant Smile Arc Display') : 'Not Recorded',
     ],
     [
       '8. ANS to Incisor (Upper Dentoalveolar Ht)',
-      ansUiVal !== null ? `${ansUiVal.toFixed(1)} mm` : (isMale ? '33.0 mm' : '30.0 mm'),
+      ansUiVal !== null ? `${ansUiVal.toFixed(1)} mm` : '—',
       isMale ? '33.0 ± 3.0 mm (30 - 36 mm)' : '30.0 ± 3.0 mm (27 - 33 mm)',
-      ansUiVal !== null && ansUiVal > ansThreshold ? 'Vertical Maxillary Dentoalveolar Excess' : ansUiVal !== null && ansUiVal < (ansThreshold - 6) ? 'Vertical Maxillary Dentoalveolar Deficiency' : 'Normal Maxillary Dentoalveolar Height',
+      ansUiVal !== null ? (ansUiVal > ansThreshold ? 'Vertical Maxillary Dentoalveolar Excess' : ansUiVal < (ansThreshold - 6) ? 'Vertical Maxillary Dentoalveolar Deficiency' : 'Normal Maxillary Dentoalveolar Height') : 'Not Recorded',
     ],
     [
       '9. Upper Lip Length (Philtrum Height)',
-      uLipLenVal !== null ? `${uLipLenVal.toFixed(1)} mm` : (isMale ? '22.0 mm' : '20.0 mm'),
+      uLipLenVal !== null ? `${uLipLenVal.toFixed(1)} mm` : '—',
       isMale ? '22.0 ± 2.0 mm (20 - 24 mm)' : '20.0 ± 2.0 mm (18 - 22 mm)',
-      uLipLenVal !== null && uLipLenVal < lipThreshold ? 'Short Upper Lip (Philtrum Incompetence)' : uLipLenVal !== null && uLipLenVal > (lipThreshold + 4) ? 'Long Upper Lip (Curtains Smile Display)' : 'Harmonious Upper Lip Philtrum Dimension',
+      uLipLenVal !== null ? (uLipLenVal < lipThreshold ? 'Short Upper Lip (Philtrum Incompetence)' : uLipLenVal > (lipThreshold + 4) ? 'Long Upper Lip (Curtains Smile Display)' : 'Harmonious Upper Lip Philtrum Dimension') : 'Not Recorded',
     ],
     [
       '10. Excess Exposure Etiology Diagnostic',
-      calculatedEtiology,
+      calculatedEtiology !== 'Pending Examination' ? calculatedEtiology : '—',
       'Normal Esthetic Display',
-      `Differential Cause: ${calculatedEtiology}`,
+      calculatedEtiology !== 'Pending Examination' ? `Differential Cause: ${calculatedEtiology}` : 'Not Recorded',
     ],
     [
       '11. Alveolar Support: Palatal Cortex',
@@ -524,122 +545,130 @@ export function buildSheet3Payload(
   holdP: any,
   getStageVal: (field: any) => any
 ): CephSheetPayload {
-  const nAMmVal = findCephVal(compCeph.n_a_mm, 0.0);
-  const uiSnVal = findCephVal(compCeph.ui_sn, getStageVal(downsP?.u1Sn), 104.0);
-  const uiNaDegVal = findCephVal(compCeph.ui_na_deg, getStageVal(steinerP?.u1NaDeg), 24.0);
-  const uiNaMmVal = findCephVal(compCeph.ui_na_mm, getStageVal(steinerP?.u1NaMm), 4.0);
-  const uiNlVal = findCephVal(compCeph.ui_nl, 110.0);
-  const uiApogDegVal = findCephVal(compCeph.ui_apog_deg, 28.0);
-  const uiApogMmVal = findCephVal(compCeph.ui_apog_mm, 5.0);
-  const uiNpogMmVal = findCephVal(compCeph.ui_npog_mm, 2.0);
-  const nasolabialVal = findCephVal(compCeph.nasolabial_angle, getStageVal(mcnamaraP?.nasolabialAngle), getStageVal(steinerP?.nasolabialAngle), 102.0);
-  const nasalVal = findCephVal(compCeph.nasal_angle, 30.0);
-  const labialVal = findCephVal(compCeph.labial_angle, 72.0);
-  const uLipThickVal = findCephVal(compCeph.u_lip_thickness, getStageVal(holdP?.upperLipThickness), 13.0);
-  const basicULipVal = findCephVal(compCeph.basic_u_lip_thickness, getStageVal(holdP?.basicUpperLipThickness), 15.0);
+  const nAMmVal = findCephVal(compCeph?.n_a_mm);
+  const uiSnVal = findCephVal(compCeph?.ui_sn, getStageVal(downsP?.u1Sn));
+  const uiNaDegVal = findCephVal(compCeph?.ui_na_deg, getStageVal(steinerP?.u1NaDeg));
+  const uiNaMmVal = findCephVal(compCeph?.ui_na_mm, getStageVal(steinerP?.u1NaMm));
+  const uiNlVal = findCephVal(compCeph?.ui_nl);
+  const uiApogDegVal = findCephVal(compCeph?.ui_apog_deg);
+  const uiApogMmVal = findCephVal(compCeph?.ui_apog_mm);
+  const uiNpogMmVal = findCephVal(compCeph?.ui_npog_mm);
+  const nasolabialVal = findCephVal(compCeph?.nasolabial_angle, getStageVal(mcnamaraP?.nasolabialAngle), getStageVal(steinerP?.nasolabialAngle));
+  const nasalVal = findCephVal(compCeph?.nasal_angle);
+  const labialVal = findCephVal(compCeph?.labial_angle);
+  const uLipThickVal = findCephVal(compCeph?.u_lip_thickness, getStageVal(holdP?.upperLipThickness));
+  const basicULipVal = findCephVal(compCeph?.basic_u_lip_thickness, getStageVal(holdP?.basicUpperLipThickness));
 
   const rows: (string | number)[][] = [
     [
       '1. N-A Linear Distance (Maxillary AP)',
-      nAMmVal !== null ? `${nAMmVal.toFixed(1)} mm` : '0.0 mm',
+      nAMmVal !== null ? `${nAMmVal.toFixed(1)} mm` : '—',
       '0.0 mm (-3.0 to +3.0 mm)',
-      nAMmVal !== null && nAMmVal > 3.0 ? 'Maxillary Basal Protrusion' : nAMmVal !== null && nAMmVal < -3.0 ? 'Maxillary Basal Retrusion' : 'Normal Maxillary Basal Position',
+      nAMmVal !== null ? (nAMmVal > 3.0 ? 'Maxillary Basal Protrusion' : nAMmVal < -3.0 ? 'Maxillary Basal Retrusion' : 'Normal Maxillary Basal Position') : 'Not Recorded',
     ],
     [
       '2. Upper Incisor to SN Angle (UI-SN)',
-      uiSnVal !== null ? `${uiSnVal.toFixed(1)}°` : '104.0°',
+      uiSnVal !== null ? `${uiSnVal.toFixed(1)}°` : '—',
       '104.0° ± 4.0° (98.0° - 106.0°)',
-      uiSnVal !== null && uiSnVal > 106.0 ? 'Proclined Upper Incisors to Cranial Base' : uiSnVal !== null && uiSnVal < 98.0 ? 'Retroclined Upper Incisors to Cranial Base' : 'Normal Upper Incisor Inclination (UI-SN)',
+      uiSnVal !== null ? (uiSnVal > 106.0 ? 'Proclined Upper Incisors to Cranial Base' : uiSnVal < 98.0 ? 'Retroclined Upper Incisors to Cranial Base' : 'Normal Upper Incisor Inclination (UI-SN)') : 'Not Recorded',
     ],
     [
       '3. Upper Incisor to NA Angle (UI-NA°)',
-      uiNaDegVal !== null ? `${uiNaDegVal.toFixed(1)}°` : '24.0°',
+      uiNaDegVal !== null ? `${uiNaDegVal.toFixed(1)}°` : '—',
       '24.0° ± 4.0° (18.0° - 26.0°)',
-      uiNaDegVal !== null && uiNaDegVal > 26.0 ? 'Proclined Upper Incisors to NA Line' : uiNaDegVal !== null && uiNaDegVal < 18.0 ? 'Retroclined Upper Incisors to NA Line' : 'Normal Upper Incisor Incline to NA',
+      uiNaDegVal !== null ? (uiNaDegVal > 26.0 ? 'Proclined Upper Incisors to NA Line' : uiNaDegVal < 18.0 ? 'Retroclined Upper Incisors to NA Line' : 'Normal Upper Incisor Incline to NA') : 'Not Recorded',
     ],
     [
       '4. Upper Incisor to NA Distance (UI-NA mm)',
-      uiNaMmVal !== null ? `${uiNaMmVal.toFixed(1)} mm` : '4.0 mm',
+      uiNaMmVal !== null ? `${uiNaMmVal.toFixed(1)} mm` : '—',
       '4.0 ± 2.0 mm (2.0 - 6.0 mm)',
-      uiNaMmVal !== null && uiNaMmVal > 6.0 ? 'Maxillary Incisor Linear Protrusion' : uiNaMmVal !== null && uiNaMmVal < 2.0 ? 'Maxillary Incisor Linear Retrusion' : 'Normal Maxillary Incisor AP Position',
+      uiNaMmVal !== null ? (uiNaMmVal > 6.0 ? 'Maxillary Incisor Linear Protrusion' : uiNaMmVal < 2.0 ? 'Maxillary Incisor Linear Retrusion' : 'Normal Maxillary Incisor AP Position') : 'Not Recorded',
     ],
     [
       '5. Upper Incisor to Palatal Plane (UI-NL)',
-      uiNlVal !== null ? `${uiNlVal.toFixed(1)}°` : '110.0°',
+      uiNlVal !== null ? `${uiNlVal.toFixed(1)}°` : '—',
       '110.0° ± 5.0° (105.0° - 115.0°)',
-      uiNlVal !== null && uiNlVal > 115.0 ? 'Proclined to Palatal Plane' : uiNlVal !== null && uiNlVal < 105.0 ? 'Retroclined to Palatal Plane' : 'Harmonious Palatal Incline',
+      uiNlVal !== null ? (uiNlVal > 115.0 ? 'Proclined to Palatal Plane' : uiNlVal < 105.0 ? 'Retroclined to Palatal Plane' : 'Harmonious Palatal Incline') : 'Not Recorded',
     ],
     [
       '6. Upper Incisor to A-Pog Angle',
-      uiApogDegVal !== null ? `${uiApogDegVal.toFixed(1)}°` : '28.0°',
+      uiApogDegVal !== null ? `${uiApogDegVal.toFixed(1)}°` : '—',
       '28.0° ± 4.0° (24.0° - 32.0°)',
-      uiApogDegVal !== null && uiApogDegVal > 32.0 ? 'Increased Proclination relative to APog' : uiApogDegVal !== null && uiApogDegVal < 24.0 ? 'Decreased Incline relative to APog' : 'Normal APog Angle Balance',
+      uiApogDegVal !== null ? (uiApogDegVal > 32.0 ? 'Increased Proclination relative to APog' : uiApogDegVal < 24.0 ? 'Decreased Incline relative to APog' : 'Normal APog Angle Balance') : 'Not Recorded',
     ],
     [
       '7. Upper Incisor to A-Pog Distance',
-      uiApogMmVal !== null ? `${uiApogMmVal.toFixed(1)} mm` : '5.0 mm',
+      uiApogMmVal !== null ? `${uiApogMmVal.toFixed(1)} mm` : '—',
       '5.0 ± 2.0 mm (3.0 - 7.0 mm)',
-      uiApogMmVal !== null && uiApogMmVal > 7.0 ? 'Anterior Protrusion beyond APog' : uiApogMmVal !== null && uiApogMmVal < 3.0 ? 'Retrusion behind APog Line' : 'Normal Incisor Distance to APog',
+      uiApogMmVal !== null ? (uiApogMmVal > 7.0 ? 'Anterior Protrusion beyond APog' : uiApogMmVal < 3.0 ? 'Retrusion behind APog Line' : 'Normal Incisor Distance to APog') : 'Not Recorded',
     ],
     [
       '8. Upper Incisor to N-Pog Distance',
-      uiNpogMmVal !== null ? `${uiNpogMmVal.toFixed(1)} mm` : '2.0 mm',
+      uiNpogMmVal !== null ? `${uiNpogMmVal.toFixed(1)} mm` : '—',
       '2.0 ± 2.0 mm (0.0 - 4.0 mm)',
-      uiNpogMmVal !== null && uiNpogMmVal > 4.0 ? 'Protruded relative to Facial Plane' : uiNpogMmVal !== null && uiNpogMmVal < 0.0 ? 'Retruded relative to Facial Plane' : 'Normal Relation to Facial Plane',
+      uiNpogMmVal !== null ? (uiNpogMmVal > 4.0 ? 'Protruded relative to Facial Plane' : uiNpogMmVal < 0.0 ? 'Retruded relative to Facial Plane' : 'Normal Relation to Facial Plane') : 'Not Recorded',
     ],
     [
       '9. Nasolabial Angle (Cm-Sn-Ls)',
-      nasolabialVal !== null ? `${nasolabialVal.toFixed(1)}°` : '102.0°',
+      nasolabialVal !== null ? `${nasolabialVal.toFixed(1)}°` : '—',
       '102.0° ± 8.0° (94.0° - 110.0°)',
-      nasolabialVal !== null && nasolabialVal < 94.0 ? 'Acute Angle / Protrusive Upper Lip' : nasolabialVal !== null && nasolabialVal > 110.0 ? 'Obtuse Angle / Retrusive Upper Lip' : 'Ideal Balanced Nasolabial Contour',
+      nasolabialVal !== null ? (nasolabialVal < 94.0 ? 'Acute Angle / Protrusive Upper Lip' : nasolabialVal > 110.0 ? 'Obtuse Angle / Retrusive Upper Lip' : 'Ideal Balanced Nasolabial Contour') : 'Not Recorded',
     ],
     [
       '10. Nasal Angle (Columella to FH)',
-      nasalVal !== null ? `${nasalVal.toFixed(1)}°` : '30.0°',
+      nasalVal !== null ? `${nasalVal.toFixed(1)}°` : '—',
       '30.0° ± 5.0° (25.0° - 35.0°)',
-      nasalVal !== null && nasalVal > 35.0 ? 'Upturned Nasal Tip / High Columella' : nasalVal !== null && nasalVal < 25.0 ? 'Downward Downturned Nasal Tip' : 'Normal Nasal Tip Incline',
+      nasalVal !== null ? (nasalVal > 35.0 ? 'Upturned Nasal Tip / High Columella' : nasalVal < 25.0 ? 'Downward Downturned Nasal Tip' : 'Normal Nasal Tip Incline') : 'Not Recorded',
     ],
     [
       '11. Labial Angle (Upper Lip to FH)',
-      labialVal !== null ? `${labialVal.toFixed(1)}°` : '72.0°',
+      labialVal !== null ? `${labialVal.toFixed(1)}°` : '—',
       '72.0° ± 7.0° (65.0° - 80.0°)',
-      labialVal !== null && labialVal < 65.0 ? 'Proclined Upper Lip Incline' : labialVal !== null && labialVal > 80.0 ? 'Retroclined / Upright Upper Lip' : 'Normal Upper Lip Incline',
+      labialVal !== null ? (labialVal < 65.0 ? 'Proclined Upper Lip Incline' : labialVal > 80.0 ? 'Retroclined / Upright Upper Lip' : 'Normal Upper Lip Incline') : 'Not Recorded',
     ],
     [
       '12. Upper Lip Thickness (Vermilion)',
-      uLipThickVal !== null ? `${uLipThickVal.toFixed(1)} mm` : '13.0 mm',
+      uLipThickVal !== null ? `${uLipThickVal.toFixed(1)} mm` : '—',
       '13.0 ± 2.0 mm (12.0 - 15.0 mm)',
-      uLipThickVal !== null && uLipThickVal > 15.0 ? 'Thick Vermilion Border' : uLipThickVal !== null && uLipThickVal < 12.0 ? 'Thin Vermilion Border' : 'Normal Vermilion Thickness',
+      uLipThickVal !== null ? (uLipThickVal > 15.0 ? 'Thick Vermilion Border' : uLipThickVal < 12.0 ? 'Thin Vermilion Border' : 'Normal Vermilion Thickness') : 'Not Recorded',
     ],
     [
       '13. Basic Upper Lip Thickness (A Point)',
-      basicULipVal !== null ? `${basicULipVal.toFixed(1)} mm` : '15.0 mm',
+      basicULipVal !== null ? `${basicULipVal.toFixed(1)} mm` : '—',
       '15.0 ± 2.0 mm (14.0 - 16.0 mm)',
-      basicULipVal !== null && basicULipVal > 16.0 ? 'Thick Base Cushion (High Buffer)' : basicULipVal !== null && basicULipVal < 14.0 ? 'Thin Base (Direct 1:1 Response)' : 'Normal Base Lip Cushion',
+      basicULipVal !== null ? (basicULipVal > 16.0 ? 'Thick Base Cushion (High Buffer)' : basicULipVal < 14.0 ? 'Thin Base (Direct 1:1 Response)' : 'Normal Base Lip Cushion') : 'Not Recorded',
     ],
   ];
 
-  const maxRetractionLimit = uiNaMmVal && uiNaMmVal > 4 ? (uiNaMmVal - 4).toFixed(1) : '0.0';
+  const maxRetractionLimit = uiNaMmVal !== null && uiNaMmVal > 4 ? (uiNaMmVal - 4).toFixed(1) : (uiNaMmVal !== null ? '0.0' : null);
 
   const inferencePoints: SheetInferencePoint[] = [
     {
       title: 'Maxillary AP Basal Position',
-      finding: `N-A distance of ${nAMmVal?.toFixed(1)} mm indicates a ${nAMmVal && nAMmVal > 3 ? 'protrusive' : nAMmVal && nAMmVal < -3 ? 'retrusive' : 'neutral'} maxillary basal foundation.`,
-      badge: nAMmVal && nAMmVal > 3 ? 'Protrusive' : 'Orthognathic',
+      finding: nAMmVal !== null
+        ? `N-A distance of ${nAMmVal.toFixed(1)} mm indicates a ${nAMmVal > 3 ? 'protrusive' : nAMmVal < -3 ? 'retrusive' : 'neutral'} maxillary basal foundation.`
+        : 'Maxillary basal position measurements pending.',
+      badge: nAMmVal !== null ? (nAMmVal > 3 ? 'Protrusive' : 'Orthognathic') : undefined,
     },
     {
       title: 'Upper Incisor Inclination & Protrusion',
-      finding: `UI-SN (${uiSnVal?.toFixed(1)}°) and UI-NA (${uiNaDegVal?.toFixed(1)}° / ${uiNaMmVal?.toFixed(1)} mm) confirm ${uiNaDegVal && uiNaDegVal > 26 ? 'significant maxillary incisor proclination and flaring' : uiNaDegVal && uiNaDegVal < 18 ? 'retroclined maxillary incisors' : 'normal incisor torque and position'}.`,
-      badge: uiNaDegVal && uiNaDegVal > 26 ? 'Proclined' : 'Normal',
+      finding: uiSnVal !== null || uiNaDegVal !== null || uiNaMmVal !== null
+        ? `UI-SN (${uiSnVal?.toFixed(1) ?? '—'}°) and UI-NA (${uiNaDegVal?.toFixed(1) ?? '—'}° / ${uiNaMmVal?.toFixed(1) ?? '—'} mm) confirm ${uiNaDegVal && uiNaDegVal > 26 ? 'significant maxillary incisor proclination and flaring' : uiNaDegVal && uiNaDegVal < 18 ? 'retroclined maxillary incisors' : 'normal incisor torque and position'}.`
+        : 'Upper incisor inclination measurements pending.',
+      badge: uiNaDegVal !== null ? (uiNaDegVal > 26 ? 'Proclined' : 'Normal') : undefined,
     },
     {
       title: 'Permissible Upper Incisor Retraction',
-      finding: `Estimated permissible incisor retraction capacity is approximately ${maxRetractionLimit} mm to achieve ideal UI-NA norm (4.0 mm) without compromising nasolabial support.`,
+      finding: maxRetractionLimit !== null
+        ? `Estimated permissible incisor retraction capacity is approximately ${maxRetractionLimit} mm to achieve ideal UI-NA norm (4.0 mm) without compromising nasolabial support.`
+        : 'Permissible incisor retraction capacity calculation pending UI-NA measurement.',
     },
     {
       title: 'Nasolabial Angle & Upper Lip Profile',
-      finding: `Nasolabial angle of ${nasolabialVal?.toFixed(1)}° with basic lip thickness of ${basicULipVal?.toFixed(1)} mm provides ${basicULipVal && basicULipVal > 15 ? 'substantial soft tissue masking buffer during retraction' : 'direct 1:1 soft tissue retraction fidelity'}.`,
-      badge: nasolabialVal && nasolabialVal < 94 ? 'Acute / Full' : 'Balanced',
+      finding: nasolabialVal !== null || basicULipVal !== null
+        ? `Nasolabial angle of ${nasolabialVal?.toFixed(1) ?? '—'}° with basic lip thickness of ${basicULipVal?.toFixed(1) ?? '—'} mm provides ${basicULipVal && basicULipVal > 15 ? 'substantial soft tissue masking buffer during retraction' : 'direct 1:1 soft tissue retraction fidelity'}.`
+        : 'Nasolabial angle and soft tissue thickness measurements pending.',
+      badge: nasolabialVal !== null ? (nasolabialVal < 94 ? 'Acute / Full' : 'Balanced') : undefined,
     },
   ];
 
@@ -672,106 +701,116 @@ export function buildSheet4Payload(
   rickP: any,
   getStageVal: (field: any) => any
 ): CephSheetPayload {
-  const fmiaVal = findCephVal(compCeph.li_fh, getStageVal(stP?.fmia), 65.0);
-  const impaVal = findCephVal(compCeph.li_mp, getStageVal(stP?.impa), getStageVal(downsP?.impa), 93.0);
-  const l1NbDegVal = findCephVal(compCeph.li_nb_deg, getStageVal(steinerP?.lowerIncisorToNbDeg), 25.0);
-  const l1NbMmVal = findCephVal(compCeph.li_nb_mm, getStageVal(steinerP?.lowerIncisorToNbMm), 4.0);
-  const l1ApogVal = findCephVal(compCeph.li_apog_mm, getStageVal(rickP?.lowerIncisorToAPogMm), 2.0);
-  const l1NpogVal = findCephVal(compCeph.li_npog_mm, 1.0);
-  const holdawayRatioVal = findCephVal(compCeph.li_nb_holdaway_ratio, 1.0);
-  const mentolabialVal = findCephVal(compCeph.mentolabial_angle, 124.0);
-  const lLipThickVal = findCephVal(compCeph.l_lip_thickness, 13.0);
-  const lLipLenVal = findCephVal(compCeph.l_lip_length, 44.0);
+  const fmiaVal = findCephVal(compCeph?.li_fh, getStageVal(stP?.fmia));
+  const impaVal = findCephVal(compCeph?.li_mp, getStageVal(stP?.impa), getStageVal(downsP?.impa));
+  const l1NbDegVal = findCephVal(compCeph?.li_nb_deg, getStageVal(steinerP?.lowerIncisorToNbDeg));
+  const l1NbMmVal = findCephVal(compCeph?.li_nb_mm, getStageVal(steinerP?.lowerIncisorToNbMm));
+  const l1ApogVal = findCephVal(compCeph?.li_apog_mm, getStageVal(rickP?.lowerIncisorToAPogMm));
+  const l1NpogVal = findCephVal(compCeph?.li_npog_mm);
+  const holdawayRatioVal = findCephVal(compCeph?.li_nb_holdaway_ratio);
+  const mentolabialVal = findCephVal(compCeph?.mentolabial_angle);
+  const lLipThickVal = findCephVal(compCeph?.l_lip_thickness);
+  const lLipLenVal = findCephVal(compCeph?.l_lip_length);
 
   const rows: (string | number)[][] = [
     [
       '1. Lower Incisor to FH (FMIA Angle)',
-      fmiaVal !== null ? `${fmiaVal.toFixed(1)}°` : '65.0°',
+      fmiaVal !== null ? `${fmiaVal.toFixed(1)}°` : '—',
       '65.0° ± 4.0° (61.0° - 69.0°)',
-      fmiaVal !== null && fmiaVal < 61.0 ? 'Proclined Lower Incisors (Decreased FMIA)' : fmiaVal !== null && fmiaVal > 69.0 ? 'Upright Lower Incisors (Increased FMIA)' : 'Ideal Tweed FMIA Stability Angle',
+      fmiaVal !== null ? (fmiaVal < 61.0 ? 'Proclined Lower Incisors (Decreased FMIA)' : fmiaVal > 69.0 ? 'Upright Lower Incisors (Increased FMIA)' : 'Ideal Tweed FMIA Stability Angle') : 'Not Recorded',
     ],
     [
       '2. Lower Incisor to MP (IMPA Angle)',
-      impaVal !== null ? `${impaVal.toFixed(1)}°` : '93.0°',
+      impaVal !== null ? `${impaVal.toFixed(1)}°` : '—',
       '90.0° - 95.0° (85.0° - 95.0°)',
-      impaVal !== null && impaVal > 95.0 ? 'Proclined beyond Symphysis / Thin Labial Plate Risk' : impaVal !== null && impaVal < 85.0 ? 'Retroclined / Uprighted Lower Incisors' : 'Harmonious IMPA on Mandibular Basal Bone',
+      impaVal !== null ? (impaVal > 95.0 ? 'Proclined beyond Symphysis / Thin Labial Plate Risk' : impaVal < 85.0 ? 'Retroclined / Uprighted Lower Incisors' : 'Harmonious IMPA on Mandibular Basal Bone') : 'Not Recorded',
     ],
     [
       '3. Lower Incisor to NB Angle (L1-NB°)',
-      l1NbDegVal !== null ? `${l1NbDegVal.toFixed(1)}°` : '25.0°',
+      l1NbDegVal !== null ? `${l1NbDegVal.toFixed(1)}°` : '—',
       '25.0° ± 4.0° (21.0° - 29.0°)',
-      l1NbDegVal !== null && l1NbDegVal > 29.0 ? 'Increased Lower Incisor Angulation to NB' : l1NbDegVal !== null && l1NbDegVal < 21.0 ? 'Decreased Lower Incisor Angulation to NB' : 'Normal Lower Incisor Incline to NB Line',
+      l1NbDegVal !== null ? (l1NbDegVal > 29.0 ? 'Increased Lower Incisor Angulation to NB' : l1NbDegVal < 21.0 ? 'Decreased Lower Incisor Angulation to NB' : 'Normal Lower Incisor Incline to NB Line') : 'Not Recorded',
     ],
     [
       '4. Lower Incisor to NB Distance (L1-NB mm)',
-      l1NbMmVal !== null ? `${l1NbMmVal.toFixed(1)} mm` : '4.0 mm',
+      l1NbMmVal !== null ? `${l1NbMmVal.toFixed(1)} mm` : '—',
       '4.0 ± 2.0 mm (2.0 - 6.0 mm)',
-      l1NbMmVal !== null && l1NbMmVal > 6.0 ? 'Lower Incisor Linear Protrusion past NB' : l1NbMmVal !== null && l1NbMmVal < 2.0 ? 'Lower Incisor Linear Retrusion behind NB' : 'Normal Lower Incisor Position to NB',
+      l1NbMmVal !== null ? (l1NbMmVal > 6.0 ? 'Lower Incisor Linear Protrusion past NB' : l1NbMmVal < 2.0 ? 'Lower Incisor Linear Retrusion behind NB' : 'Normal Lower Incisor Position to NB') : 'Not Recorded',
     ],
     [
       '5. Lower Incisor to A-Pog Distance',
-      l1ApogVal !== null ? `${l1ApogVal.toFixed(1)} mm` : '2.0 mm',
+      l1ApogVal !== null ? `${l1ApogVal.toFixed(1)} mm` : '—',
       '+1.0 ± 2.0 mm (0.0 - 4.0 mm)',
-      l1ApogVal !== null && l1ApogVal > 4.0 ? 'Lower Incisor Protrusion past APog Line' : l1ApogVal !== null && l1ApogVal < 0.0 ? 'Lower Incisor Retruded behind APog Line' : 'Ideal Incisor AP Stability on A-Pog Line',
+      l1ApogVal !== null ? (l1ApogVal > 4.0 ? 'Lower Incisor Protrusion past APog Line' : l1ApogVal < 0.0 ? 'Lower Incisor Retruded behind APog Line' : 'Ideal Incisor AP Stability on A-Pog Line') : 'Not Recorded',
     ],
     [
       '6. Lower Incisor to N-Pog Distance',
-      l1NpogVal !== null ? `${l1NpogVal.toFixed(1)} mm` : '1.0 mm',
+      l1NpogVal !== null ? `${l1NpogVal.toFixed(1)} mm` : '—',
       '1.0 ± 2.0 mm (-1.0 to +3.0 mm)',
-      l1NpogVal !== null && l1NpogVal > 3.0 ? 'Protruded to Facial Plane' : l1NpogVal !== null && l1NpogVal < -1.0 ? 'Retruded to Facial Plane' : 'Normal Relation to Facial Plane',
+      l1NpogVal !== null ? (l1NpogVal > 3.0 ? 'Protruded to Facial Plane' : l1NpogVal < -1.0 ? 'Retruded to Facial Plane' : 'Normal Relation to Facial Plane') : 'Not Recorded',
     ],
     [
       '7. Holdaway Ratio (LI-NB to Pog-NB)',
-      holdawayRatioVal !== null ? `${holdawayRatioVal.toFixed(2)}:1` : '1.00:1',
+      holdawayRatioVal !== null ? `${holdawayRatioVal.toFixed(2)}:1` : '—',
       '1.00:1 (0.80 - 1.20:1)',
-      holdawayRatioVal !== null && holdawayRatioVal > 1.2 ? 'Incisor Prominence exceeds Chin Projection' : holdawayRatioVal !== null && holdawayRatioVal < 0.8 ? 'Prominent Bony Chin relative to Incisors' : 'Ideal 1:1 Holdaway Harmony Equilibrium',
+      holdawayRatioVal !== null ? (holdawayRatioVal > 1.2 ? 'Incisor Prominence exceeds Chin Projection' : holdawayRatioVal < 0.8 ? 'Prominent Bony Chin relative to Incisors' : 'Ideal 1:1 Holdaway Harmony Equilibrium') : 'Not Recorded',
     ],
     [
       '8. Mentolabial Sulcus Angle',
-      mentolabialVal !== null ? `${mentolabialVal.toFixed(1)}°` : '124.0°',
+      mentolabialVal !== null ? `${mentolabialVal.toFixed(1)}°` : '—',
       '124.0° ± 10.0° (110.0° - 139.0°)',
-      mentolabialVal !== null && mentolabialVal < 110.0 ? 'Deep Mentolabial Sulcus / Everted Lower Lip' : mentolabialVal !== null && mentolabialVal > 139.0 ? 'Flat / Obliterated Mentolabial Sulcus' : 'Harmonious Mentolabial Sulcus Depth',
+      mentolabialVal !== null ? (mentolabialVal < 110.0 ? 'Deep Mentolabial Sulcus / Everted Lower Lip' : mentolabialVal > 139.0 ? 'Flat / Obliterated Mentolabial Sulcus' : 'Harmonious Mentolabial Sulcus Depth') : 'Not Recorded',
     ],
     [
       '9. Lower Lip Thickness (Vermilion)',
-      lLipThickVal !== null ? `${lLipThickVal.toFixed(1)} mm` : '13.0 mm',
+      lLipThickVal !== null ? `${lLipThickVal.toFixed(1)} mm` : '—',
       '13.0 ± 2.0 mm (11.0 - 15.0 mm)',
-      lLipThickVal !== null && lLipThickVal > 15.0 ? 'Thick Lower Lip Vermilion' : lLipThickVal !== null && lLipThickVal < 11.0 ? 'Thin Lower Lip Vermilion' : 'Normal Lower Lip Thickness',
+      lLipThickVal !== null ? (lLipThickVal > 15.0 ? 'Thick Lower Lip Vermilion' : lLipThickVal < 11.0 ? 'Thin Lower Lip Vermilion' : 'Normal Lower Lip Thickness') : 'Not Recorded',
     ],
     [
       '10. Lower Lip Length',
-      lLipLenVal !== null ? `${lLipLenVal.toFixed(1)} mm` : '44.0 mm',
+      lLipLenVal !== null ? `${lLipLenVal.toFixed(1)} mm` : '—',
       '44.0 ± 4.0 mm (40.0 - 48.0 mm)',
-      lLipLenVal !== null && lLipLenVal > 48.0 ? 'Elongated Lower Lip' : lLipLenVal !== null && lLipLenVal < 40.0 ? 'Short Lower Lip (Strain on closure)' : 'Normal Lower Lip Length',
+      lLipLenVal !== null ? (lLipLenVal > 48.0 ? 'Elongated Lower Lip' : lLipLenVal < 40.0 ? 'Short Lower Lip (Strain on closure)' : 'Normal Lower Lip Length') : 'Not Recorded',
     ],
   ];
 
-  const impaStatus = impaVal && impaVal > 95 ? 'Proclined' : impaVal && impaVal < 85 ? 'Retroclined' : 'Stable';
+  const impaStatus = impaVal !== null ? (impaVal > 95 ? 'Proclined' : impaVal < 85 ? 'Retroclined' : 'Stable') : undefined;
 
   const inferencePoints: SheetInferencePoint[] = [
     {
       title: 'Mandibular Incisor Inclination (IMPA / FMIA)',
-      finding: `IMPA of ${impaVal?.toFixed(1)}° and FMIA of ${fmiaVal?.toFixed(1)}° indicate ${impaVal && impaVal > 95 ? 'proclined lower incisors with potential cortical plate thinning' : impaVal && impaVal < 85 ? 'lingual uprighting of lower incisors' : 'stable lower incisor inclination centered on basal bone'}.`,
+      finding: impaVal !== null || fmiaVal !== null
+        ? `IMPA of ${impaVal?.toFixed(1) ?? '—'}° and FMIA of ${fmiaVal?.toFixed(1) ?? '—'}° indicate ${impaVal && impaVal > 95 ? 'proclined lower incisors with potential cortical plate thinning' : impaVal && impaVal < 85 ? 'lingual uprighting of lower incisors' : 'stable lower incisor inclination centered on basal bone'}.`
+        : 'Mandibular incisor inclination measurements pending.',
       badge: impaStatus,
     },
     {
       title: 'Lower Incisor AP Position to NB & FH',
-      finding: `L1-NB distance (${l1NbMmVal?.toFixed(1)} mm) and A-Pog distance (${l1ApogVal?.toFixed(1)} mm) confirm ${l1ApogVal && l1ApogVal > 3 ? 'anterior protrusion beyond stable Tweed/Ricketts limits' : 'adequate positioning within the stability envelope'}.`,
-      badge: l1ApogVal && l1ApogVal > 3 ? 'Protruded' : 'Stable',
+      finding: l1NbMmVal !== null || l1ApogVal !== null
+        ? `L1-NB distance (${l1NbMmVal?.toFixed(1) ?? '—'} mm) and A-Pog distance (${l1ApogVal?.toFixed(1) ?? '—'} mm) confirm ${l1ApogVal && l1ApogVal > 3 ? 'anterior protrusion beyond stable Tweed/Ricketts limits' : 'adequate positioning within the stability envelope'}.`
+        : 'Lower incisor anteroposterior position measurements pending.',
+      badge: l1ApogVal !== null ? (l1ApogVal > 3 ? 'Protruded' : 'Stable') : undefined,
     },
     {
       title: 'Holdaway Ratio Harmony',
-      finding: `Holdaway ratio of ${holdawayRatioVal?.toFixed(2)}:1 establishes ${holdawayRatioVal && holdawayRatioVal > 1.2 ? 'dominance of dental prominence over bony chin' : 'balanced incisor-to-chin aesthetic equilibrium'}.`,
+      finding: holdawayRatioVal !== null
+        ? `Holdaway ratio of ${holdawayRatioVal.toFixed(2)}:1 establishes ${holdawayRatioVal > 1.2 ? 'dominance of dental prominence over bony chin' : 'balanced incisor-to-chin aesthetic equilibrium'}.`
+        : 'Holdaway ratio measurement pending.',
     },
     {
       title: 'Mentolabial Sulcus & Lower Lip Harmony',
-      finding: `Mentolabial angle of ${mentolabialVal?.toFixed(1)}° with lip thickness of ${lLipThickVal?.toFixed(1)} mm confirms ${mentolabialVal && mentolabialVal < 110 ? 'curled/everted lower lip from deep overbite' : 'harmonious chin-lip transition'}.`,
+      finding: mentolabialVal !== null || lLipThickVal !== null
+        ? `Mentolabial angle of ${mentolabialVal?.toFixed(1) ?? '—'}° with lip thickness of ${lLipThickVal?.toFixed(1) ?? '—'} mm confirms ${mentolabialVal && mentolabialVal < 110 ? 'curled/everted lower lip from deep overbite' : 'harmonious chin-lip transition'}.`
+        : 'Mentolabial sulcus and lower lip measurements pending.',
     },
   ];
 
   const biomechanicsDirective = impaVal && impaVal > 95.0
     ? 'Avoid further lower incisor proclination during alignment; maintain arch length without excessive labial tipping or consider premolar extractions / IPR to upright incisors.'
-    : 'Preserve current IMPA at 90°-93° on basal bone to guarantee long-term post-treatment stability.';
+    : impaVal !== null
+    ? 'Preserve current IMPA at 90°-93° on basal bone to guarantee long-term post-treatment stability.'
+    : undefined;
 
   return {
     slideTitle: '18H (Part A). Comprehensive Cephalometric Discrepancy (Sheet 4: Lower Dento-Alveolar & Soft Tissue)',
@@ -802,30 +841,29 @@ export function buildDiscrepancyMasterPayload1(
   compCeph: any
 ): CephSheetPayload {
   const isMale = patientGender === 'Male';
-  const anbVal = findCephVal(getStageVal(cephDiscP?.anbAngle), getStageVal(steinerP?.anb), getStageVal(downsP?.anb), 2.0);
-  const aMoBFhVal = findCephVal(getStageVal(cephDiscP?.aMoBFh), 4.0);
-  const witsVal = findCephVal(getStageVal(cephDiscP?.witsAoBo), getStageVal(steinerP?.wits), 0.0);
-  const betaVal = findCephVal(getStageVal(cephDiscP?.betaAngle), 31.0);
-  const naPogVal = findCephVal(getStageVal(cephDiscP?.naPog), getStageVal(downsP?.angleConvexity), 0.0);
-  const abNpogVal = findCephVal(getStageVal(cephDiscP?.abNpog), -4.5);
+  const anbVal = findCephVal(getStageVal(cephDiscP?.anbAngle), getStageVal(steinerP?.anb), getStageVal(downsP?.anb));
+  const aMoBFhVal = findCephVal(getStageVal(cephDiscP?.aMoBFh));
+  const witsVal = findCephVal(getStageVal(cephDiscP?.witsAoBo), getStageVal(steinerP?.wits));
+  const betaVal = findCephVal(getStageVal(cephDiscP?.betaAngle));
+  const naPogVal = findCephVal(getStageVal(cephDiscP?.naPog), getStageVal(downsP?.angleConvexity));
+  const abNpogVal = findCephVal(getStageVal(cephDiscP?.abNpog));
   const maxMandRatioVal = findCephVal(
     getStageVal(cephDiscP?.maxMandRatio),
     mcnamaraP?.maxillaryUnitLength && mcnamaraP?.mandibularUnitLength && Number(getStageVal(mcnamaraP.mandibularUnitLength)) > 0
       ? Number((Number(getStageVal(mcnamaraP.maxillaryUnitLength)) / Number(getStageVal(mcnamaraP.mandibularUnitLength))).toFixed(2))
-      : null,
-    1.0
+      : null
   );
-  const harvoldDiffVal = findCephVal(getStageVal(cephDiscP?.harvoldUnitDiff), getStageVal(mcnamaraP?.maxMandDiff), 26.0);
-  const yenVal = findCephVal(getStageVal(cephDiscP?.yenAngle), 120.0);
-  const wVal = findCephVal(getStageVal(cephDiscP?.wAngle), 53.5);
-  const apdiVal = findCephVal(getStageVal(cephDiscP?.apdi), 83.0);
-  const softProfileAngleVal = findCephVal(getStageVal(cephDiscP?.softTissueProfileAngle), getStageVal(cogsSoftP?.gSnPg), 161.0);
-  const totalTissueProfileAngleVal = findCephVal(getStageVal(cephDiscP?.totalTissueProfileAngle), getStageVal(cogsSoftP?.totalProfileAngle), isMale ? 133.0 : 137.0);
-  const softTissueFacialAngleVal = findCephVal(getStageVal(cephDiscP?.softTissueFacialAngle), getStageVal(holdP?.softTissueFacialAngle), 90.5);
-  const subnasaleToChinVal = findCephVal(getStageVal(cephDiscP?.subnasaleToChin), getStageVal(cogsSoftP?.snPg), 0.0);
-  const snOrientVal = findCephVal(getStageVal(cephDiscP?.snOrientationAngle), getStageVal(steinerP?.snToFh), getStageVal(downsP?.snFh), 7.0);
-  const basicUpperLipVal = findCephVal(getStageVal(cephDiscP?.basicUpperLip), getStageVal(holdP?.basicUpperLipThickness), getStageVal(holdP?.upperLipThickness), compCeph?.basic_u_lip_thickness, 14.0);
-  const softChinVal = findCephVal(getStageVal(holdP?.softTissueChinThickness), getStageVal(cephDiscP?.softTissueChin), getStageVal(cogsSoftP?.gPg), 11.0);
+  const harvoldDiffVal = findCephVal(getStageVal(cephDiscP?.harvoldUnitDiff), getStageVal(mcnamaraP?.maxMandDiff));
+  const yenVal = findCephVal(getStageVal(cephDiscP?.yenAngle));
+  const wVal = findCephVal(getStageVal(cephDiscP?.wAngle));
+  const apdiVal = findCephVal(getStageVal(cephDiscP?.apdi));
+  const softProfileAngleVal = findCephVal(getStageVal(cephDiscP?.softTissueProfileAngle), getStageVal(cogsSoftP?.gSnPg));
+  const totalTissueProfileAngleVal = findCephVal(getStageVal(cephDiscP?.totalTissueProfileAngle), getStageVal(cogsSoftP?.totalProfileAngle));
+  const softTissueFacialAngleVal = findCephVal(getStageVal(cephDiscP?.softTissueFacialAngle), getStageVal(holdP?.softTissueFacialAngle));
+  const subnasaleToChinVal = findCephVal(getStageVal(cephDiscP?.subnasaleToChin), getStageVal(cogsSoftP?.snPg));
+  const snOrientVal = findCephVal(getStageVal(cephDiscP?.snOrientationAngle), getStageVal(steinerP?.snToFh), getStageVal(downsP?.snFh));
+  const basicUpperLipVal = findCephVal(getStageVal(cephDiscP?.basicUpperLip), getStageVal(holdP?.basicUpperLipThickness), getStageVal(holdP?.upperLipThickness), compCeph?.basic_u_lip_thickness);
+  const softChinVal = findCephVal(getStageVal(holdP?.softTissueChinThickness), getStageVal(cephDiscP?.softTissueChin), getStageVal(cogsSoftP?.gPg));
 
   const totalProfileNormText = isMale ? '133.0° (130.0° - 136.0°)' : '137.0° (134.0° - 140.0°)';
   const totalProfileMin = isMale ? 130.0 : 134.0;
@@ -834,137 +872,146 @@ export function buildDiscrepancyMasterPayload1(
   const rows: (string | number)[][] = [
     [
       '1. ANB Angle (Skeletal Relationship)',
-      anbVal !== null ? `${anbVal.toFixed(1)}°` : '2.0°',
+      anbVal !== null ? `${anbVal.toFixed(1)}°` : '—',
       '2.0° (0.0° - 4.0°)',
-      anbVal !== null && anbVal > 4 ? `Skeletal Class II Basal Discrepancy (${anbVal > 7.5 ? 'Severe' : anbVal > 5.5 ? 'Moderate' : 'Mild'})` : anbVal !== null && anbVal < 0 ? `Skeletal Class III Basal Discrepancy (${anbVal < -4 ? 'Severe' : anbVal < -2 ? 'Moderate' : 'Mild'})` : 'Skeletal Class I Harmonious Relationship',
+      anbVal !== null ? (anbVal > 4 ? `Skeletal Class II Basal Discrepancy (${anbVal > 7.5 ? 'Severe' : anbVal > 5.5 ? 'Moderate' : 'Mild'})` : anbVal < 0 ? `Skeletal Class III Basal Discrepancy (${anbVal < -4 ? 'Severe' : anbVal < -2 ? 'Moderate' : 'Mild'})` : 'Skeletal Class I Harmonious Relationship') : 'Not Recorded',
     ],
     [
       '2. A-MoB-^nFH (Maxillomandibular AP)',
-      aMoBFhVal !== null ? `${aMoBFhVal.toFixed(1)} mm` : '4.0 mm',
+      aMoBFhVal !== null ? `${aMoBFhVal.toFixed(1)} mm` : '—',
       '4.0 mm (2.0 - 6.0 mm)',
-      aMoBFhVal !== null && aMoBFhVal > 6 ? 'Increased Maxillomandibular AP Distance (Class II Tendency)' : aMoBFhVal !== null && aMoBFhVal < 2 ? 'Decreased Maxillomandibular AP Distance (Class III Tendency)' : 'Normal Maxillomandibular AP Alignment',
+      aMoBFhVal !== null ? (aMoBFhVal > 6 ? 'Increased Maxillomandibular AP Distance (Class II Tendency)' : aMoBFhVal < 2 ? 'Decreased Maxillomandibular AP Distance (Class III Tendency)' : 'Normal Maxillomandibular AP Alignment') : 'Not Recorded',
     ],
     [
       '3. AO to BO (Wits Appraisal)',
-      witsVal !== null ? `${witsVal.toFixed(1)} mm` : '0.0 mm',
+      witsVal !== null ? `${witsVal.toFixed(1)} mm` : '—',
       '0.0 mm (-1.0 to 1.0 mm)',
-      witsVal !== null && witsVal > 1 ? `Wits Class II Basal Discrepancy (${witsVal > 5 ? 'Severe' : witsVal > 2.5 ? 'Moderate' : 'Mild'})` : witsVal !== null && witsVal < -1 ? `Wits Class III Basal Discrepancy (${witsVal < -5 ? 'Severe' : witsVal < -2.5 ? 'Moderate' : 'Mild'})` : 'Harmonious Wits Skeletal Relationship',
+      witsVal !== null ? (witsVal > 1 ? `Wits Class II Basal Discrepancy (${witsVal > 5 ? 'Severe' : witsVal > 2.5 ? 'Moderate' : 'Mild'})` : witsVal < -1 ? `Wits Class III Basal Discrepancy (${witsVal < -5 ? 'Severe' : witsVal < -2.5 ? 'Moderate' : 'Mild'})` : 'Harmonious Wits Skeletal Relationship') : 'Not Recorded',
     ],
     [
       '4. Beta Angle',
-      betaVal !== null ? `${betaVal.toFixed(1)}°` : '31.0°',
+      betaVal !== null ? `${betaVal.toFixed(1)}°` : '—',
       '31.0° (27.0° - 35.0°)',
-      betaVal !== null && betaVal < 27 ? 'Class II Skeletal Discrepancy (Beta < 27°)' : betaVal !== null && betaVal > 35 ? 'Class III Skeletal Discrepancy (Beta > 35°)' : 'Class I Skeletal Harmony (Beta 27°-35°)',
+      betaVal !== null ? (betaVal < 27 ? 'Class II Skeletal Discrepancy (Beta < 27°)' : betaVal > 35 ? 'Class III Skeletal Discrepancy (Beta > 35°)' : 'Class I Skeletal Harmony (Beta 27°-35°)') : 'Not Recorded',
     ],
     [
       '5. NA-Pog (Angle of Profile Convexity)',
-      naPogVal !== null ? `${naPogVal.toFixed(1)}°` : '0.0°',
+      naPogVal !== null ? `${naPogVal.toFixed(1)}°` : '—',
       '0.0° (-8.5° to 10.0°)',
-      naPogVal !== null && naPogVal > 10 ? 'Convex Facial Skeletal Profile (Class II Tendency)' : naPogVal !== null && naPogVal < -8.5 ? 'Concave Facial Skeletal Profile (Class III Tendency)' : 'Straight / Normal Profile Convexity',
+      naPogVal !== null ? (naPogVal > 10 ? 'Convex Facial Skeletal Profile (Class II Tendency)' : naPogVal < -8.5 ? 'Concave Facial Skeletal Profile (Class III Tendency)' : 'Straight / Normal Profile Convexity') : 'Not Recorded',
     ],
     [
       '6. AB-NPog (AB to Facial Plane)',
-      abNpogVal !== null ? `${abNpogVal.toFixed(1)}°` : '-4.5°',
+      abNpogVal !== null ? `${abNpogVal.toFixed(1)}°` : '—',
       '-4.5° (-8.0° to 0.0°)',
-      abNpogVal !== null && abNpogVal < -8 ? 'Class II Relationship (Point B posterior to Point A)' : abNpogVal !== null && abNpogVal > 0 ? 'Class III Relationship (Point B anterior to Point A)' : 'Harmonious AB Plane to Facial Plane',
+      abNpogVal !== null ? (abNpogVal < -8 ? 'Class II Relationship (Point B posterior to Point A)' : abNpogVal > 0 ? 'Class III Relationship (Point B anterior to Point A)' : 'Harmonious AB Plane to Facial Plane') : 'Not Recorded',
     ],
     [
       '7. Max:Mand Ratio (2:3 / Effective Ratio)',
-      maxMandRatioVal !== null ? `${maxMandRatioVal.toFixed(2)}` : '1.00',
+      maxMandRatioVal !== null ? `${maxMandRatioVal.toFixed(2)}` : '—',
       '1.00 (0.95 - 1.05)',
-      maxMandRatioVal !== null && maxMandRatioVal > 1.05 ? 'Relative Maxillary Excess / Mandibular Deficiency (Class II)' : maxMandRatioVal !== null && maxMandRatioVal < 0.95 ? 'Relative Mandibular Excess / Maxillary Deficiency (Class III)' : 'Harmonious Maxillomandibular Ratio',
+      maxMandRatioVal !== null ? (maxMandRatioVal > 1.05 ? 'Relative Maxillary Excess / Mandibular Deficiency (Class II)' : maxMandRatioVal < 0.95 ? 'Relative Mandibular Excess / Maxillary Deficiency (Class III)' : 'Harmonious Maxillomandibular Ratio') : 'Not Recorded',
     ],
     [
       '8. Harvold\'s Unit Length Difference',
-      harvoldDiffVal !== null ? `${harvoldDiffVal.toFixed(1)} mm` : '26.0 mm',
+      harvoldDiffVal !== null ? `${harvoldDiffVal.toFixed(1)} mm` : '—',
       '26.0 mm (24.0 - 28.0 mm)',
-      harvoldDiffVal !== null && harvoldDiffVal > 28 ? 'Increased Mandibular Differential (Class III Tendency)' : harvoldDiffVal !== null && harvoldDiffVal < 24 ? 'Decreased Mandibular Differential (Class II Tendency)' : 'Normal Unit Length Differential (Harmonious Jaw Bases)',
+      harvoldDiffVal !== null ? (harvoldDiffVal > 28 ? 'Increased Mandibular Differential (Class III Tendency)' : harvoldDiffVal < 24 ? 'Decreased Mandibular Differential (Class II Tendency)' : 'Normal Unit Length Differential (Harmonious Jaw Bases)') : 'Not Recorded',
     ],
     [
       '9. YEN Angle (Cranial Base Reference)',
-      yenVal !== null ? `${yenVal.toFixed(1)}°` : '120.0°',
+      yenVal !== null ? `${yenVal.toFixed(1)}°` : '—',
       '120.0° (117.0° - 123.0°)',
-      yenVal !== null && yenVal < 117 ? 'Class II Skeletal Pattern (YEN < 117°)' : yenVal !== null && yenVal > 123 ? 'Class III Skeletal Pattern (YEN > 123°)' : 'Class I Skeletal Pattern (YEN 117°-123°)',
+      yenVal !== null ? (yenVal < 117 ? 'Class II Skeletal Pattern (YEN < 117°)' : yenVal > 123 ? 'Class III Skeletal Pattern (YEN > 123°)' : 'Class I Skeletal Pattern (YEN 117°-123°)') : 'Not Recorded',
     ],
     [
       '10. W Angle (True Sagittal Geometry)',
-      wVal !== null ? `${wVal.toFixed(1)}°` : '53.5°',
+      wVal !== null ? `${wVal.toFixed(1)}°` : '—',
       '53.5° (51.0° - 56.0°)',
-      wVal !== null && wVal < 51 ? 'Class II Skeletal Pattern (W < 51°)' : wVal !== null && wVal > 56 ? 'Class III Skeletal Pattern (W > 56°)' : 'Class I Skeletal Pattern (W 51°-56°)',
+      wVal !== null ? (wVal < 51 ? 'Class II Skeletal Pattern (W < 51°)' : wVal > 56 ? 'Class III Skeletal Pattern (W > 56°)' : 'Class I Skeletal Pattern (W 51°-56°)') : 'Not Recorded',
     ],
     [
       '11. APDI (Anteroposterior Dysplasia Indicator)',
-      apdiVal !== null ? `${apdiVal.toFixed(1)}°` : '83.0°',
+      apdiVal !== null ? `${apdiVal.toFixed(1)}°` : '—',
       '83.0° (81.0° - 85.0°)',
-      apdiVal !== null && apdiVal < 81 ? 'APDI Class II Skeletal Discrepancy (<81°)' : apdiVal !== null && apdiVal > 85 ? 'APDI Class III Skeletal Discrepancy (>85°)' : 'Normal Anteroposterior Skeletal Balance (81°-85°)',
+      apdiVal !== null ? (apdiVal < 81 ? 'APDI Class II Skeletal Discrepancy (<81°)' : apdiVal > 85 ? 'APDI Class III Skeletal Discrepancy (>85°)' : 'Normal Anteroposterior Skeletal Balance (81°-85°)') : 'Not Recorded',
     ],
     [
       '12. Soft Tissue Profile Angle (N\'-Sn-Pog\')',
-      softProfileAngleVal !== null ? `${softProfileAngleVal.toFixed(1)}°` : '161.0°',
+      softProfileAngleVal !== null ? `${softProfileAngleVal.toFixed(1)}°` : '—',
       '161.0° (157.0° - 165.0°)',
-      softProfileAngleVal !== null && softProfileAngleVal < 157 ? 'Convex Soft Tissue Profile / Subnasale-Chin Retrusion' : softProfileAngleVal !== null && softProfileAngleVal > 165 ? 'Straight to Concave Soft Tissue Profile' : 'Harmonious Soft Tissue Profile Angle (161° Norm)',
+      softProfileAngleVal !== null ? (softProfileAngleVal < 157 ? 'Convex Soft Tissue Profile / Subnasale-Chin Retrusion' : softProfileAngleVal > 165 ? 'Straight to Concave Soft Tissue Profile' : 'Harmonious Soft Tissue Profile Angle (161° Norm)') : 'Not Recorded',
     ],
     [
       '13. Total Tissue Profile Angle (Gl\'-Prn-Pog\')',
-      totalTissueProfileAngleVal !== null ? `${totalTissueProfileAngleVal.toFixed(1)}°` : (isMale ? '133.0°' : '137.0°'),
+      totalTissueProfileAngleVal !== null ? `${totalTissueProfileAngleVal.toFixed(1)}°` : '—',
       totalProfileNormText,
-      totalTissueProfileAngleVal !== null && totalTissueProfileAngleVal < totalProfileMin ? 'Hyper-Convex Total Profile (Prominent Nose / Retrusive Chin)' : totalTissueProfileAngleVal !== null && totalTissueProfileAngleVal > totalProfileMax ? 'Flat / Concave Total Profile (Deficient Nose / Prominent Chin)' : 'Harmonious Total Soft Tissue Profile Contour',
+      totalTissueProfileAngleVal !== null ? (totalTissueProfileAngleVal < totalProfileMin ? 'Hyper-Convex Total Profile (Prominent Nose / Retrusive Chin)' : totalTissueProfileAngleVal > totalProfileMax ? 'Flat / Concave Total Profile (Deficient Nose / Prominent Chin)' : 'Harmonious Total Soft Tissue Profile Contour') : 'Not Recorded',
     ],
     [
       '14. Soft Tissue Facial Angle (FH to N\'-Pog\')',
-      softTissueFacialAngleVal !== null ? `${softTissueFacialAngleVal.toFixed(1)}°` : '90.5°',
+      softTissueFacialAngleVal !== null ? `${softTissueFacialAngleVal.toFixed(1)}°` : '—',
       '90.5° (87.0° - 94.0°)',
-      softTissueFacialAngleVal !== null && softTissueFacialAngleVal > 94 ? 'Prominent / Prognathic Soft Tissue Chin' : softTissueFacialAngleVal !== null && softTissueFacialAngleVal < 87 ? 'Retrusive / Retrognathic Soft Tissue Chin' : 'Harmonious Soft Tissue Facial Angle (90.5° Norm)',
+      softTissueFacialAngleVal !== null ? (softTissueFacialAngleVal > 94 ? 'Prominent / Prognathic Soft Tissue Chin' : softTissueFacialAngleVal < 87 ? 'Retrusive / Retrognathic Soft Tissue Chin' : 'Harmonious Soft Tissue Facial Angle (90.5° Norm)') : 'Not Recorded',
     ],
     [
       '15. Subnasale-to-Chin Distance (Sn to Pog\')',
-      subnasaleToChinVal !== null ? `${subnasaleToChinVal.toFixed(1)} mm` : '0.0 mm',
+      subnasaleToChinVal !== null ? `${subnasaleToChinVal.toFixed(1)} mm` : '—',
       '0.0 mm (-2.0 to 2.0 mm)',
-      subnasaleToChinVal !== null && subnasaleToChinVal > 2 ? 'Anterior Chin Projection / Class III Soft Profile' : subnasaleToChinVal !== null && subnasaleToChinVal < -2 ? 'Retrusive Chin / Class II Soft Profile' : 'Ideal Subnasale-to-Chin Soft Tissue Alignment',
+      subnasaleToChinVal !== null ? (subnasaleToChinVal > 2 ? 'Anterior Chin Projection / Class III Soft Profile' : subnasaleToChinVal < -2 ? 'Retrusive Chin / Class II Soft Profile' : 'Ideal Subnasale-to-Chin Soft Tissue Alignment') : 'Not Recorded',
     ],
     [
       '16. SN Orientation Angle (SN to FH)',
-      snOrientVal !== null ? `${snOrientVal.toFixed(1)}°` : '7.0°',
+      snOrientVal !== null ? `${snOrientVal.toFixed(1)}°` : '—',
       '7.0° (5.0° - 9.0°)',
-      snOrientVal !== null && snOrientVal > 9 ? 'Steep Cranial Base (High SN / Masks Class II, lowers SNA/SNB)' : snOrientVal !== null && snOrientVal < 5 ? 'Flat Cranial Base (Low SN / Increases SNA/SNB readings)' : 'Normal Cranial Base Orientation (Reliable SN References)',
+      snOrientVal !== null ? (snOrientVal > 9 ? 'Steep Cranial Base (High SN / Masks Class II, lowers SNA/SNB)' : snOrientVal < 5 ? 'Flat Cranial Base (Low SN / Increases SNA/SNB readings)' : 'Normal Cranial Base Orientation (Reliable SN References)') : 'Not Recorded',
     ],
     [
       '17. Basic Upper Lip Thickness (A Point - Sn)',
-      basicUpperLipVal !== null ? `${basicUpperLipVal.toFixed(1)} mm` : '14.0 mm',
+      basicUpperLipVal !== null ? `${basicUpperLipVal.toFixed(1)} mm` : '—',
       '14.0 ± 1.0 mm (13.0 - 15.0 mm)',
-      basicUpperLipVal !== null && basicUpperLipVal < 13 ? 'Thin Upper Lip (Limited buffer; direct 1:1 incisor retraction response)' : basicUpperLipVal !== null && basicUpperLipVal > 15 ? 'Thick Upper Lip (High soft tissue cushioning buffer)' : 'Normal Upper Lip Thickness (14 mm norm)',
+      basicUpperLipVal !== null ? (basicUpperLipVal < 13 ? 'Thin Upper Lip (Limited buffer; direct 1:1 incisor retraction response)' : basicUpperLipVal > 15 ? 'Thick Upper Lip (High soft tissue cushioning buffer)' : 'Normal Upper Lip Thickness (14 mm norm)') : 'Not Recorded',
     ],
     [
       '18. Soft Tissue Chin Thickness (Pog - Pog\')',
-      softChinVal !== null ? `${softChinVal.toFixed(1)} mm` : '11.0 mm',
+      softChinVal !== null ? `${softChinVal.toFixed(1)} mm` : '—',
       '11.0 mm (10.0 - 12.0 mm)',
-      softChinVal !== null && softChinVal < 10 ? 'Thin Soft Tissue Chin Pad (Deficient buffer; skeletal retrusion exposed)' : softChinVal !== null && softChinVal > 12 ? 'Thick Soft Tissue Chin Cushion (Compensates skeletal deficiency)' : 'Normal Soft Tissue Chin Thickness (10-12 mm norm)',
+      softChinVal !== null ? (softChinVal < 10 ? 'Thin Soft Tissue Chin Pad (Deficient buffer; skeletal retrusion exposed)' : softChinVal > 12 ? 'Thick Soft Tissue Chin Cushion (Compensates skeletal deficiency)' : 'Normal Soft Tissue Chin Thickness (10-12 mm norm)') : 'Not Recorded',
     ],
   ];
 
-  let primaryClass = 'Skeletal Class I';
+  let primaryClass = 'Pending Assessment';
   if (anbVal !== null) {
     if (anbVal > 4) primaryClass = 'Skeletal Class II';
     else if (anbVal < 0) primaryClass = 'Skeletal Class III';
+    else primaryClass = 'Skeletal Class I';
   }
 
   const inferencePoints: SheetInferencePoint[] = [
     {
       title: 'Sagittal Skeletal Basal Relationship',
-      finding: `${primaryClass} confirmed across ANB (${anbVal?.toFixed(1)}°), Wits appraisal (${witsVal?.toFixed(1)} mm), Beta angle (${betaVal?.toFixed(1)}°), YEN angle (${yenVal?.toFixed(1)}°), and W angle (${wVal?.toFixed(1)}°).`,
-      badge: primaryClass,
+      finding: anbVal !== null || witsVal !== null || betaVal !== null
+        ? `${primaryClass} indicated across ANB (${anbVal?.toFixed(1) ?? '—'}°), Wits appraisal (${witsVal?.toFixed(1) ?? '—'} mm), Beta angle (${betaVal?.toFixed(1) ?? '—'}°), YEN angle (${yenVal?.toFixed(1) ?? '—'}°), and W angle (${wVal?.toFixed(1) ?? '—'}°).`
+        : 'Sagittal skeletal relationship measurements pending.',
+      badge: primaryClass !== 'Pending Assessment' ? primaryClass : undefined,
     },
     {
       title: 'Harvold & Proportional Ratio Equilibrium',
-      finding: `Harvold unit length difference of ${harvoldDiffVal?.toFixed(1)} mm and Max:Mand Ratio of ${maxMandRatioVal?.toFixed(2)} confirm ${maxMandRatioVal && maxMandRatioVal > 1.05 ? 'maxillary dimension dominance' : maxMandRatioVal && maxMandRatioVal < 0.95 ? 'mandibular dimension dominance' : 'balanced inter-jaw unit length proportions'}.`,
+      finding: harvoldDiffVal !== null || maxMandRatioVal !== null
+        ? `Harvold unit length difference of ${harvoldDiffVal?.toFixed(1) ?? '—'} mm and Max:Mand Ratio of ${maxMandRatioVal?.toFixed(2) ?? '—'} confirm ${maxMandRatioVal && maxMandRatioVal > 1.05 ? 'maxillary dimension dominance' : maxMandRatioVal && maxMandRatioVal < 0.95 ? 'mandibular dimension dominance' : 'balanced inter-jaw unit length proportions'}.`
+        : 'Harvold unit length and effective ratio measurements pending.',
     },
     {
       title: 'Soft Tissue Profile & Facial Contours',
-      finding: `Soft tissue profile angle of ${softProfileAngleVal?.toFixed(1)}° and total profile of ${totalTissueProfileAngleVal?.toFixed(1)}° establish ${softProfileAngleVal && softProfileAngleVal < 157 ? 'convex profile with chin retrusion' : 'harmonious soft tissue draping'}.`,
+      finding: softProfileAngleVal !== null || totalTissueProfileAngleVal !== null
+        ? `Soft tissue profile angle of ${softProfileAngleVal?.toFixed(1) ?? '—'}° and total profile of ${totalTissueProfileAngleVal?.toFixed(1) ?? '—'}° establish ${softProfileAngleVal && softProfileAngleVal < 157 ? 'convex profile with chin retrusion' : 'harmonious soft tissue draping'}.`
+        : 'Soft tissue profile contour measurements pending.',
     },
     {
       title: 'Cranial Orientation & Soft Tissue Masking Buffer',
-      finding: `SN Orientation angle (${snOrientVal?.toFixed(1)}°) validates cranial reference lines; basic upper lip (${basicUpperLipVal?.toFixed(1)} mm) and chin cushion (${softChinVal?.toFixed(1)} mm) provide ${basicUpperLipVal && basicUpperLipVal > 15 ? 'substantial masking cushion' : 'true anatomical reflection'}.`,
+      finding: snOrientVal !== null || basicUpperLipVal !== null || softChinVal !== null
+        ? `SN Orientation angle (${snOrientVal?.toFixed(1) ?? '—'}°) validates cranial reference lines; basic upper lip (${basicUpperLipVal?.toFixed(1) ?? '—'} mm) and chin cushion (${softChinVal?.toFixed(1) ?? '—'} mm) provide ${basicUpperLipVal && basicUpperLipVal > 15 ? 'substantial masking cushion' : 'true anatomical reflection'}.`
+        : 'Cranial orientation and soft tissue thickness measurements pending.',
     },
   ];
 
@@ -972,7 +1019,9 @@ export function buildDiscrepancyMasterPayload1(
     ? 'Class II sagittal correction indicated with consideration of soft tissue masking capacity; preserve lip support and monitor cranial base tilt.'
     : primaryClass === 'Skeletal Class III'
     ? 'Class III sagittal protocol; evaluate maxillary skeletal protraction vs mandibular surgical repositioning based on discrepancy breakdown.'
-    : 'Harmonious Class I basal relation; focus on ideal leveling, arch coordination, and dental torque optimization.';
+    : primaryClass === 'Skeletal Class I'
+    ? 'Harmonious Class I basal relation; focus on ideal leveling, arch coordination, and dental torque optimization.'
+    : undefined;
 
   return {
     slideTitle: '18A. Master Cephalometric Discrepancy (Part 1: Sagittal Standards & Soft Tissue)',
@@ -1001,148 +1050,167 @@ export function buildDiscrepancyMasterPayload2(
   cogsSoftP: any,
   compCeph: any
 ): CephSheetPayload {
-  const snaVal = findCephVal(getStageVal(cephDiscP?.snaAngle), getStageVal(steinerP?.sna), getStageVal(downsP?.sna), 82.0);
-  const aNPerpVal = findCephVal(getStageVal(cephDiscP?.aNPerp), getStageVal(mcnamaraP?.naPerpToPointA), 0.5);
-  const maxSizeAnsPnsVal = findCephVal(getStageVal(cephDiscP?.maxSizeAnsPns), getStageVal(cogsHardP?.ansPns), 57.0);
-  const maxEffLenVal = findCephVal(getStageVal(cephDiscP?.maxEffectiveLength), getStageVal(mcnamaraP?.maxillaryUnitLength), 92.0);
-  const maxPlacementVal = findCephVal(getStageVal(cephDiscP?.maxPlacementSInfPtmNf), 0.0);
+  const snaVal = findCephVal(getStageVal(cephDiscP?.snaAngle), getStageVal(steinerP?.sna), getStageVal(downsP?.sna));
+  const aNPerpVal = findCephVal(getStageVal(cephDiscP?.aNPerp), getStageVal(mcnamaraP?.naPerpToPointA));
+  const maxSizeAnsPnsVal = findCephVal(getStageVal(cephDiscP?.maxSizeAnsPns), getStageVal(cogsHardP?.ansPns));
+  const maxEffLenVal = findCephVal(getStageVal(cephDiscP?.maxEffectiveLength), getStageVal(mcnamaraP?.maxillaryUnitLength));
+  const maxPlacementVal = findCephVal(getStageVal(cephDiscP?.maxPlacementSInfPtmNf));
 
-  const snbVal = findCephVal(getStageVal(cephDiscP?.snbAngle), getStageVal(steinerP?.snb), getStageVal(downsP?.snb), 80.0);
-  const pogNPerpVal = findCephVal(getStageVal(cephDiscP?.pogNPerp), getStageVal(mcnamaraP?.pogNaPerp), 1.0);
-  const facialAngleVal = findCephVal(getStageVal(cephDiscP?.facialAngle), getStageVal(downsP?.facialAngle), 87.8);
-  const mandCorpusSizeVal = findCephVal(getStageVal(cephDiscP?.mandCorpusSize), getStageVal(cogsHardP?.goPg), 75.0);
-  const mandRamusHeightVal = findCephVal(getStageVal(cephDiscP?.mandRamusHeight), getStageVal(cogsHardP?.arGo), 46.0);
-  const mandEffLenVal = findCephVal(getStageVal(cephDiscP?.mandEffectiveLength), getStageVal(mcnamaraP?.mandibularUnitLength), 118.0);
-  const saddleAngleVal = findCephVal(getStageVal(cephDiscP?.saddleAngle), compCeph?.saddle_angle, 123.0);
-  const postCranialBaseVal = findCephVal(getStageVal(cephDiscP?.postCranialBase), 35.0);
-  const effectOfGonialVal = findCephVal(getStageVal(cephDiscP?.effectOfGonialAngle), compCeph?.gonial_angle, 128.0);
-  const ramusOrientationVal = findCephVal(getStageVal(cephDiscP?.ramusOrientation), compCeph?.articular_angle, 143.0);
+  const snbVal = findCephVal(getStageVal(cephDiscP?.snbAngle), getStageVal(steinerP?.snb), getStageVal(downsP?.snb));
+  const pogNPerpVal = findCephVal(getStageVal(cephDiscP?.pogNPerp), getStageVal(mcnamaraP?.pogNaPerp));
+  const facialAngleVal = findCephVal(getStageVal(cephDiscP?.facialAngle), getStageVal(downsP?.facialAngle));
+  const mandCorpusSizeVal = findCephVal(getStageVal(cephDiscP?.mandCorpusSize), getStageVal(cogsHardP?.goPg));
+  const mandRamusHeightVal = findCephVal(getStageVal(cephDiscP?.mandRamusHeight), getStageVal(cogsHardP?.arGo));
+  const mandEffLenVal = findCephVal(getStageVal(cephDiscP?.mandEffectiveLength), getStageVal(mcnamaraP?.mandibularUnitLength));
+  const saddleAngleVal = findCephVal(getStageVal(cephDiscP?.saddleAngle), compCeph?.saddle_angle);
+  const postCranialBaseVal = findCephVal(getStageVal(cephDiscP?.postCranialBase));
+  const effectOfGonialVal = findCephVal(getStageVal(cephDiscP?.effectOfGonialAngle), compCeph?.gonial_angle);
+  const ramusOrientationVal = findCephVal(getStageVal(cephDiscP?.ramusOrientation), compCeph?.articular_angle);
 
   const rows: (string | number)[][] = [
     // Maxilla (5 parameters)
     [
       '1. SNA Angle (Maxillary AP Position)',
-      snaVal !== null ? `${snaVal.toFixed(1)}°` : '82.0°',
+      snaVal !== null ? `${snaVal.toFixed(1)}°` : '—',
       '82.0° ± 2.0° (80.0° - 84.0°)',
-      snaVal !== null && snaVal > 84 ? 'Maxillary Prognathism / Anterior Placement' : snaVal !== null && snaVal < 80 ? 'Maxillary Retrognathism / Posterior Placement' : 'Normal Maxillary Basal Position (SNA)',
+      snaVal !== null ? (snaVal > 84 ? 'Maxillary Prognathism / Anterior Placement' : snaVal < 80 ? 'Maxillary Retrognathism / Posterior Placement' : 'Normal Maxillary Basal Position (SNA)') : 'Not Recorded',
     ],
     [
       '2. A-N1 / A-NPerp (Point A to N-Perp)',
-      aNPerpVal !== null ? `${aNPerpVal.toFixed(1)} mm` : '0.5 mm',
+      aNPerpVal !== null ? `${aNPerpVal.toFixed(1)} mm` : '—',
       '0.5 mm (0.0 - 1.0 mm)',
-      aNPerpVal !== null && aNPerpVal > 1 ? 'Maxillary Midface Skeletal Protrusion' : aNPerpVal !== null && aNPerpVal < 0 ? 'Maxillary Midface Skeletal Retrusion' : 'Normal Maxillary AP Alignment (A-NPerp)',
+      aNPerpVal !== null ? (aNPerpVal > 1 ? 'Maxillary Midface Skeletal Protrusion' : aNPerpVal < 0 ? 'Maxillary Midface Skeletal Retrusion' : 'Normal Maxillary AP Alignment (A-NPerp)') : 'Not Recorded',
     ],
     [
       '3. Maxillary Size (ANS-PNS)',
-      maxSizeAnsPnsVal !== null ? `${maxSizeAnsPnsVal.toFixed(1)} mm` : '57.0 mm',
+      maxSizeAnsPnsVal !== null ? `${maxSizeAnsPnsVal.toFixed(1)} mm` : '—',
       '57.0 mm (52.0 - 62.0 mm)',
-      maxSizeAnsPnsVal !== null && maxSizeAnsPnsVal > 62 ? 'Maxillary Basal Size Excess (Macro-Maxilla)' : maxSizeAnsPnsVal !== null && maxSizeAnsPnsVal < 52 ? 'Maxillary Basal Size Deficiency (Micro-Maxilla)' : 'Normal Maxillary Basal Dimension (ANS-PNS)',
+      maxSizeAnsPnsVal !== null ? (maxSizeAnsPnsVal > 62 ? 'Maxillary Basal Size Excess (Macro-Maxilla)' : maxSizeAnsPnsVal < 52 ? 'Maxillary Basal Size Deficiency (Micro-Maxilla)' : 'Normal Maxillary Basal Dimension (ANS-PNS)') : 'Not Recorded',
     ],
     [
       '4. Maxillary Effective Length (Co-ANS)',
-      maxEffLenVal !== null ? `${maxEffLenVal.toFixed(1)} mm` : '92.0 mm',
+      maxEffLenVal !== null ? `${maxEffLenVal.toFixed(1)} mm` : '—',
       '92.0 mm (85.0 - 98.0 mm)',
-      maxEffLenVal !== null && maxEffLenVal > 98 ? 'Increased Maxillary Effective Unit Length' : maxEffLenVal !== null && maxEffLenVal < 85 ? 'Decreased Maxillary Effective Unit Length' : 'Normal Maxillary Effective Length (Co-ANS)',
+      maxEffLenVal !== null ? (maxEffLenVal > 98 ? 'Increased Maxillary Effective Unit Length' : maxEffLenVal < 85 ? 'Decreased Maxillary Effective Unit Length' : 'Normal Maxillary Effective Length (Co-ANS)') : 'Not Recorded',
     ],
     [
       '5. Maxillary Placement (S-INF to Ptm-INF)',
-      maxPlacementVal !== null ? `${maxPlacementVal.toFixed(1)} mm` : '0.0 mm',
+      maxPlacementVal !== null ? `${maxPlacementVal.toFixed(1)} mm` : '—',
       '0.0 mm (-2.0 to 2.0 mm)',
-      maxPlacementVal !== null && maxPlacementVal > 2 ? 'Anterior Maxillary Placement in Craniofacial Complex' : maxPlacementVal !== null && maxPlacementVal < -2 ? 'Posterior Maxillary Placement in Craniofacial Complex' : 'Normal Maxillary Craniofacial Spatial Position',
+      maxPlacementVal !== null ? (maxPlacementVal > 2 ? 'Anterior Maxillary Placement in Craniofacial Complex' : maxPlacementVal < -2 ? 'Posterior Maxillary Placement in Craniofacial Complex' : 'Normal Maxillary Craniofacial Spatial Position') : 'Not Recorded',
     ],
     // Mandible (10 parameters)
     [
       '6. SNB Angle (Mandibular AP Position)',
-      snbVal !== null ? `${snbVal.toFixed(1)}°` : '80.0°',
+      snbVal !== null ? `${snbVal.toFixed(1)}°` : '—',
       '80.0° ± 2.0° (78.0° - 82.0°)',
-      snbVal !== null && snbVal > 82 ? 'Mandibular Prognathism / Anterior Placement' : snbVal !== null && snbVal < 78 ? 'Mandibular Retrognathism / Posterior Placement' : 'Normal Mandibular Basal Position (SNB)',
+      snbVal !== null ? (snbVal > 82 ? 'Mandibular Prognathism / Anterior Placement' : snbVal < 78 ? 'Mandibular Retrognathism / Posterior Placement' : 'Normal Mandibular Basal Position (SNB)') : 'Not Recorded',
     ],
     [
       '7. B-N1 / Pog-NPerp (Pogonion to N-Perp)',
-      pogNPerpVal !== null ? `${pogNPerpVal.toFixed(1)} mm` : '1.0 mm',
+      pogNPerpVal !== null ? `${pogNPerpVal.toFixed(1)} mm` : '—',
       '1.0 mm (-2.0 to 4.0 mm)',
-      pogNPerpVal !== null && pogNPerpVal < -2 ? 'Mandibular Retrusion / Deficient Chin Position' : pogNPerpVal !== null && pogNPerpVal > 4 ? 'Mandibular Protrusion / Prominent Chin Position' : 'Normal Mandibular Chin Alignment (Pog-NPerp)',
+      pogNPerpVal !== null ? (pogNPerpVal < -2 ? 'Mandibular Retrusion / Deficient Chin Position' : pogNPerpVal > 4 ? 'Mandibular Protrusion / Prominent Chin Position' : 'Normal Mandibular Chin Alignment (Pog-NPerp)') : 'Not Recorded',
     ],
     [
       '8. Facial Angle (N-Pog to FH)',
-      facialAngleVal !== null ? `${facialAngleVal.toFixed(1)}°` : '87.8°',
+      facialAngleVal !== null ? `${facialAngleVal.toFixed(1)}°` : '—',
       '87.8° ± 3.6° (84.0° - 91.0°)',
-      facialAngleVal !== null && facialAngleVal > 91 ? 'Mandibular Prognathism / Prominent Chin Angle' : facialAngleVal !== null && facialAngleVal < 84 ? 'Mandibular Retrognathism / Recessive Chin Angle' : 'Harmonious Frankfort-Facial Angle (N-Pog to FH)',
+      facialAngleVal !== null ? (facialAngleVal > 91 ? 'Mandibular Prognathism / Prominent Chin Angle' : facialAngleVal < 84 ? 'Mandibular Retrognathism / Recessive Chin Angle' : 'Harmonious Frankfort-Facial Angle (N-Pog to FH)') : 'Not Recorded',
     ],
     [
       '9. Mandibular Corpus Size (Go-Pog)',
-      mandCorpusSizeVal !== null ? `${mandCorpusSizeVal.toFixed(1)} mm` : '75.0 mm',
+      mandCorpusSizeVal !== null ? `${mandCorpusSizeVal.toFixed(1)} mm` : '—',
       '75.0 mm (70.0 - 80.0 mm)',
-      mandCorpusSizeVal !== null && mandCorpusSizeVal > 80 ? 'Mandibular Corpus Length Excess (Long Body)' : mandCorpusSizeVal !== null && mandCorpusSizeVal < 70 ? 'Mandibular Corpus Length Deficiency (Short Body)' : 'Normal Mandibular Body Length (Go-Pog)',
+      mandCorpusSizeVal !== null ? (mandCorpusSizeVal > 80 ? 'Mandibular Corpus Length Excess (Long Body)' : mandCorpusSizeVal < 70 ? 'Mandibular Corpus Length Deficiency (Short Body)' : 'Normal Mandibular Body Length (Go-Pog)') : 'Not Recorded',
     ],
     [
       '10. Mandibular Ramus Height (Ar-Go)',
-      mandRamusHeightVal !== null ? `${mandRamusHeightVal.toFixed(1)} mm` : '46.0 mm',
+      mandRamusHeightVal !== null ? `${mandRamusHeightVal.toFixed(1)} mm` : '—',
       '46.0 mm (42.0 - 50.0 mm)',
-      mandRamusHeightVal !== null && mandRamusHeightVal > 50 ? 'Elongated Mandibular Ramus (Deep Bite Tendency)' : mandRamusHeightVal !== null && mandRamusHeightVal < 42 ? 'Short Mandibular Ramus (High Angle Tendency)' : 'Normal Ascending Ramus Height (Ar-Go)',
+      mandRamusHeightVal !== null ? (mandRamusHeightVal > 50 ? 'Elongated Mandibular Ramus (Deep Bite Tendency)' : mandRamusHeightVal < 42 ? 'Short Mandibular Ramus (High Angle Tendency)' : 'Normal Ascending Ramus Height (Ar-Go)') : 'Not Recorded',
     ],
     [
       '11. Mandibular Effective Length (Co-Gn)',
-      mandEffLenVal !== null ? `${mandEffLenVal.toFixed(1)} mm` : '118.0 mm',
+      mandEffLenVal !== null ? `${mandEffLenVal.toFixed(1)} mm` : '—',
       '118.0 mm (110.0 - 125.0 mm)',
-      mandEffLenVal !== null && mandEffLenVal > 125 ? 'Increased Total Effective Mandibular Unit Length' : mandEffLenVal !== null && mandEffLenVal < 110 ? 'Decreased Total Effective Mandibular Unit Length' : 'Normal Mandibular Effective Length (Co-Gn)',
+      mandEffLenVal !== null ? (mandEffLenVal > 125 ? 'Increased Total Effective Mandibular Unit Length' : mandEffLenVal < 110 ? 'Decreased Total Effective Mandibular Unit Length' : 'Normal Mandibular Effective Length (Co-Gn)') : 'Not Recorded',
     ],
     [
       '12. Saddle Angle (N-S-Ar Condyle Position)',
-      saddleAngleVal !== null ? `${saddleAngleVal.toFixed(1)}°` : '123.0°',
+      saddleAngleVal !== null ? `${saddleAngleVal.toFixed(1)}°` : '—',
       '123.0° ± 5.0° (118.0° - 128.0°)',
-      saddleAngleVal !== null && saddleAngleVal > 128 ? 'Posterior Condylar Placement (Class II Skeletal Tendency)' : saddleAngleVal !== null && saddleAngleVal < 118 ? 'Anterior Condylar Placement (Class III Skeletal Tendency)' : 'Normal Cranial Base Flexure / Condylar Placement',
+      saddleAngleVal !== null ? (saddleAngleVal > 128 ? 'Posterior Condylar Placement (Class II Skeletal Tendency)' : saddleAngleVal < 118 ? 'Anterior Condylar Placement (Class III Skeletal Tendency)' : 'Normal Cranial Base Flexure / Condylar Placement') : 'Not Recorded',
     ],
     [
       '13. Post Cranial Base (S-Ar Length)',
-      postCranialBaseVal !== null ? `${postCranialBaseVal.toFixed(1)} mm` : '35.0 mm',
+      postCranialBaseVal !== null ? `${postCranialBaseVal.toFixed(1)} mm` : '—',
       '35.0 mm (32.0 - 38.0 mm)',
-      postCranialBaseVal !== null && postCranialBaseVal > 38 ? 'Long Posterior Cranial Base (Condyle positioned backward)' : postCranialBaseVal !== null && postCranialBaseVal < 32 ? 'Short Posterior Cranial Base (Condyle positioned forward)' : 'Normal Posterior Cranial Base Length (S-Ar)',
+      postCranialBaseVal !== null ? (postCranialBaseVal > 38 ? 'Long Posterior Cranial Base (Condyle positioned backward)' : postCranialBaseVal < 32 ? 'Short Posterior Cranial Base (Condyle positioned forward)' : 'Normal Posterior Cranial Base Length (S-Ar)') : 'Not Recorded',
     ],
     [
       '14. Effect of Gonial Angle (Ar-Go-Me)',
-      effectOfGonialVal !== null ? `${effectOfGonialVal.toFixed(1)}°` : '128.0°',
+      effectOfGonialVal !== null ? `${effectOfGonialVal.toFixed(1)}°` : '—',
       '128.0° ± 6.0° (120.0° - 130.0°)',
-      effectOfGonialVal !== null && effectOfGonialVal > 130 ? 'Obtuse Gonial Angle (Downward/Backward Mandibular Rotation)' : effectOfGonialVal !== null && effectOfGonialVal < 120 ? 'Acute Gonial Angle (Forward/Upward Mandibular Projection)' : 'Normal Gonial Angle Architectural Form',
+      effectOfGonialVal !== null ? (effectOfGonialVal > 130 ? 'Obtuse Gonial Angle (Downward/Backward Mandibular Rotation)' : effectOfGonialVal < 120 ? 'Acute Gonial Angle (Forward/Upward Mandibular Projection)' : 'Normal Gonial Angle Architectural Form') : 'Not Recorded',
     ],
     [
       '15. Ramus Orientation S-Ar-Go (Articular)',
-      ramusOrientationVal !== null ? `${ramusOrientationVal.toFixed(1)}°` : '143.0°',
+      ramusOrientationVal !== null ? `${ramusOrientationVal.toFixed(1)}°` : '—',
       '143.0° ± 6.0° (137.0° - 149.0°)',
-      ramusOrientationVal !== null && ramusOrientationVal > 149 ? 'Increased Articular Angle (Retrognathic Ramal Orientation)' : ramusOrientationVal !== null && ramusOrientationVal < 137 ? 'Decreased Articular Angle (Prognathic Ramal Orientation)' : 'Harmonious Ramal Articular Orientation',
+      ramusOrientationVal !== null ? (ramusOrientationVal > 149 ? 'Increased Articular Angle (Retrognathic Ramal Orientation)' : ramusOrientationVal < 137 ? 'Decreased Articular Angle (Prognathic Ramal Orientation)' : 'Harmonious Ramal Articular Orientation') : 'Not Recorded',
     ],
   ];
 
   // Fault localization synthesis
-  const maxFault = (maxEffLenVal && maxEffLenVal > 98) || (snaVal && snaVal > 84) ? 'Maxillary Skeletal Excess' : (maxEffLenVal && maxEffLenVal < 85) || (snaVal && snaVal < 80) ? 'Maxillary Skeletal Deficiency' : 'Normal Maxilla';
-  const mandFault = (mandEffLenVal && mandEffLenVal < 110) || (snbVal && snbVal < 78) ? 'Mandibular Skeletal Retrognathism' : (mandEffLenVal && mandEffLenVal > 125) || (snbVal && snbVal > 82) ? 'Mandibular Skeletal Prognathism' : 'Normal Mandible';
+  const hasMaxData = maxEffLenVal !== null || snaVal !== null;
+  const maxFault = hasMaxData
+    ? ((maxEffLenVal && maxEffLenVal > 98) || (snaVal && snaVal > 84) ? 'Maxillary Skeletal Excess' : (maxEffLenVal && maxEffLenVal < 85) || (snaVal && snaVal < 80) ? 'Maxillary Skeletal Deficiency' : 'Normal Maxilla')
+    : 'Pending Data';
+
+  const hasMandData = mandEffLenVal !== null || snbVal !== null;
+  const mandFault = hasMandData
+    ? ((mandEffLenVal && mandEffLenVal < 110) || (snbVal && snbVal < 78) ? 'Mandibular Skeletal Retrognathism' : (mandEffLenVal && mandEffLenVal > 125) || (snbVal && snbVal > 82) ? 'Mandibular Skeletal Prognathism' : 'Normal Mandible')
+    : 'Pending Data';
 
   const inferencePoints: SheetInferencePoint[] = [
     {
       title: 'Maxillary Size & Spatial Placement',
-      finding: `Maxilla presents with SNA of ${snaVal?.toFixed(1)}°, ANS-PNS length of ${maxSizeAnsPnsVal?.toFixed(1)} mm, and Co-ANS of ${maxEffLenVal?.toFixed(1)} mm indicating ${maxFault.toLowerCase()}.`,
-      badge: maxFault === 'Normal Maxilla' ? 'Normal Maxilla' : maxFault.includes('Excess') ? 'Maxillary Excess' : 'Maxillary Deficiency',
+      finding: hasMaxData
+        ? `Maxilla presents with SNA of ${snaVal?.toFixed(1) ?? '—'}°, ANS-PNS length of ${maxSizeAnsPnsVal?.toFixed(1) ?? '—'} mm, and Co-ANS of ${maxEffLenVal?.toFixed(1) ?? '—'} mm indicating ${maxFault.toLowerCase()}.`
+        : 'Maxillary size and position measurements pending.',
+      badge: maxFault !== 'Pending Data' ? (maxFault === 'Normal Maxilla' ? 'Normal Maxilla' : maxFault.includes('Excess') ? 'Maxillary Excess' : 'Maxillary Deficiency') : undefined,
     },
     {
       title: 'Mandibular Dimensions & Ramus Architecture',
-      finding: `Mandible displays SNB of ${snbVal?.toFixed(1)}°, corpus length of ${mandCorpusSizeVal?.toFixed(1)} mm, ramus height of ${mandRamusHeightVal?.toFixed(1)} mm, and Co-Gn of ${mandEffLenVal?.toFixed(1)} mm confirming ${mandFault.toLowerCase()}.`,
-      badge: mandFault === 'Normal Mandible' ? 'Normal Mandible' : mandFault.includes('Retro') ? 'Mandibular Retrognathism' : 'Mandibular Prognathism',
+      finding: hasMandData
+        ? `Mandible displays SNB of ${snbVal?.toFixed(1) ?? '—'}°, corpus length of ${mandCorpusSizeVal?.toFixed(1) ?? '—'} mm, ramus height of ${mandRamusHeightVal?.toFixed(1) ?? '—'} mm, and Co-Gn of ${mandEffLenVal?.toFixed(1) ?? '—'} mm confirming ${mandFault.toLowerCase()}.`
+        : 'Mandibular size and ramus measurements pending.',
+      badge: mandFault !== 'Pending Data' ? (mandFault === 'Normal Mandible' ? 'Normal Mandible' : mandFault.includes('Retro') ? 'Mandibular Retrognathism' : 'Mandibular Prognathism') : undefined,
     },
     {
       title: 'Condylar Placement & Cranial Base Modifiers',
-      finding: `Saddle Angle (${saddleAngleVal?.toFixed(1)}°) and S-Ar length (${postCranialBaseVal?.toFixed(1)} mm) establish ${saddleAngleVal && saddleAngleVal > 128 ? 'backward condylar displacement exacerbating mandibular retrusion' : 'neutral condylar seating'}.`,
+      finding: saddleAngleVal !== null || postCranialBaseVal !== null
+        ? `Saddle Angle (${saddleAngleVal?.toFixed(1) ?? '—'}°) and S-Ar length (${postCranialBaseVal?.toFixed(1) ?? '—'} mm) establish ${saddleAngleVal && saddleAngleVal > 128 ? 'backward condylar displacement exacerbating mandibular retrusion' : 'neutral condylar seating'}.`
+        : 'Condylar seating and posterior cranial base measurements pending.',
     },
     {
       title: 'Rotational Ramus & Gonial Angle Influence',
-      finding: `Gonial angle (${effectOfGonialVal?.toFixed(1)}°) and Articular angle (${ramusOrientationVal?.toFixed(1)}°) reveal ${effectOfGonialVal && effectOfGonialVal > 130 ? 'clockwise downward-backward mandibular rotation' : 'balanced muscular-skeletal ramal orientation'}.`,
+      finding: effectOfGonialVal !== null || ramusOrientationVal !== null
+        ? `Gonial angle (${effectOfGonialVal?.toFixed(1) ?? '—'}°) and Articular angle (${ramusOrientationVal?.toFixed(1) ?? '—'}°) reveal ${effectOfGonialVal && effectOfGonialVal > 130 ? 'clockwise downward-backward mandibular rotation' : 'balanced muscular-skeletal ramal orientation'}.`
+        : 'Gonial and articular rotational angle measurements pending.',
     },
   ];
 
   const biomechanicsDirective = (mandFault.includes('Retro') && maxFault.includes('Normal'))
-    ? 'Mandibular advancement/growth modification indicated (e.g. Twin Block / Forsus / BAMP or surgical BSSO mandibular advancement).'
+    ? 'Mandibular advancement / orthopedic posturing or camouflage with Class II elastics indicated based on growth maturity status.'
     : (maxFault.includes('Excess') && mandFault.includes('Normal'))
-    ? 'Maxillary restriction/retraction indicated (e.g. High-pull headgear / TAD distalization / Maxillary premolar extractions).'
-    : 'Harmonious basal components; proceed with coordinated orthodontic mechanotherapy.';
+    ? 'Maxillary retraction / high-pull headgear or differential premolar extractions indicated.'
+    : (mandFault.includes('Prognathism'))
+    ? 'Class III mechanics with consideration of mandibular setback or maxillary protraction.'
+    : (hasMaxData || hasMandData)
+    ? 'Class I basal relationship; maintain arch coordination and focus on dental detailing.'
+    : undefined;
 
   return {
     slideTitle: '18B. Master Cephalometric Discrepancy (Part 2: Maxillary & Mandibular Breakdown)',

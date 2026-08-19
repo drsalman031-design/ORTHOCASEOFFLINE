@@ -18,6 +18,33 @@ export interface EncryptedVaultPayload {
   iv: string; // Base64
   ciphertext: string; // Base64
   checksum: string; // SHA-256 of plaintext Base64 for integrity confirmation
+  meta?: {
+    appName?: string;
+    appVersion?: string;
+    deviceKeyId?: string;
+    recordCount?: number;
+  };
+}
+
+const DEVICE_KEY_STORAGE_KEY = 'orthocase_device_vault_key';
+const DEFAULT_FALLBACK_SEED = 'orthocase-offline-device-vault-v1';
+
+/**
+ * Retrieves or lazily creates a device-bound cryptographic master key in localStorage.
+ * This guarantees seamless one-click local backup & restore on the student's phone.
+ */
+export function getOrCreateDeviceKey(): string {
+  try {
+    let key = localStorage.getItem(DEVICE_KEY_STORAGE_KEY);
+    if (!key) {
+      const randomBytes = crypto.getRandomValues(new Uint8Array(24));
+      key = `orthocase_dev_${Array.from(randomBytes, (b) => b.toString(16).padStart(2, '0')).join('')}`;
+      localStorage.setItem(DEVICE_KEY_STORAGE_KEY, key);
+    }
+    return key;
+  } catch {
+    return DEFAULT_FALLBACK_SEED;
+  }
 }
 
 function bufferToBase64(buffer: ArrayBuffer | Uint8Array): string {
@@ -39,7 +66,7 @@ function base64ToBuffer(base64: string): Uint8Array {
 }
 
 /**
- * Derives an AES-GCM-256 CryptoKey from a passphrase using PBKDF2-SHA256
+ * Derives an AES-GCM-256 CryptoKey from a passphrase or device key using PBKDF2-SHA256
  */
 export async function deriveKeyFromPassphrase(
   passphrase: string,
@@ -72,7 +99,7 @@ export async function deriveKeyFromPassphrase(
 /**
  * Computes a SHA-256 checksum of plaintext
  */
-async function computeSha256Checksum(data: string): Promise<string> {
+export async function computeSha256Checksum(data: string): Promise<string> {
   const enc = new TextEncoder();
   const hashBuffer = await crypto.subtle.digest('SHA-256', enc.encode(data));
   return bufferToBase64(hashBuffer);
@@ -83,8 +110,10 @@ async function computeSha256Checksum(data: string): Promise<string> {
  */
 export async function encryptDataToVault(
   data: unknown,
-  passphrase: string
+  passphrase?: string,
+  meta?: EncryptedVaultPayload['meta']
 ): Promise<EncryptedVaultPayload> {
+  const effectiveKey = passphrase && passphrase.trim().length > 0 ? passphrase.trim() : getOrCreateDeviceKey();
   const jsonStr = typeof data === 'string' ? data : JSON.stringify(data);
   const enc = new TextEncoder();
   const plaintextBuffer = enc.encode(jsonStr);
@@ -93,7 +122,7 @@ export async function encryptDataToVault(
   const salt = crypto.getRandomValues(new Uint8Array(16));
   const iv = crypto.getRandomValues(new Uint8Array(12));
 
-  const key = await deriveKeyFromPassphrase(passphrase, salt);
+  const key = await deriveKeyFromPassphrase(effectiveKey, salt);
   const ciphertextBuffer = await crypto.subtle.encrypt(
     { name: 'AES-GCM', iv },
     key,
@@ -116,15 +145,21 @@ export async function encryptDataToVault(
     iv: bufferToBase64(iv),
     ciphertext: bufferToBase64(ciphertextBuffer),
     checksum,
+    meta: {
+      appName: 'OrthoCase Clinical Logbook',
+      appVersion: '3.4.0',
+      ...meta,
+    },
   };
 }
 
 /**
- * Decrypts an authenticated .orthocase vault payload back to typed JS data
+ * Decrypts an authenticated .orthocase vault payload back to typed JS data.
+ * If no passphrase is provided, first tries the local device key, then fallback keys.
  */
 export async function decryptDataFromVault<T = unknown>(
   vault: EncryptedVaultPayload,
-  passphrase: string
+  passphrase?: string
 ): Promise<T> {
   if (vault.format !== 'ORTHOCASE_ENCRYPTED_VAULT' || vault.version !== '1.0') {
     throw new Error('Unsupported or invalid .orthocase vault format.');
@@ -134,17 +169,33 @@ export async function decryptDataFromVault<T = unknown>(
   const iv = base64ToBuffer(vault.iv);
   const ciphertext = base64ToBuffer(vault.ciphertext);
 
-  const key = await deriveKeyFromPassphrase(passphrase, salt, vault.kdf.iterations);
+  const keysToTry: string[] = [];
+  if (passphrase && passphrase.trim().length > 0) {
+    keysToTry.push(passphrase.trim());
+  } else {
+    keysToTry.push(getOrCreateDeviceKey());
+    keysToTry.push(DEFAULT_FALLBACK_SEED);
+  }
 
-  let decryptedBuffer: ArrayBuffer;
-  try {
-    decryptedBuffer = await crypto.subtle.decrypt(
-      { name: 'AES-GCM', iv },
-      key,
-      ciphertext
-    );
-  } catch {
-    throw new Error('Decryption failed. Incorrect password or corrupted vault file.');
+  let decryptedBuffer: ArrayBuffer | null = null;
+  let lastError: any = null;
+
+  for (const keyCandidate of keysToTry) {
+    try {
+      const key = await deriveKeyFromPassphrase(keyCandidate, salt, vault.kdf.iterations);
+      decryptedBuffer = await crypto.subtle.decrypt(
+        { name: 'AES-GCM', iv },
+        key,
+        ciphertext
+      );
+      if (decryptedBuffer) break;
+    } catch (err) {
+      lastError = err;
+    }
+  }
+
+  if (!decryptedBuffer) {
+    throw new Error('Decryption failed. The file may be password-protected or corrupted.');
   }
 
   const dec = new TextDecoder();
@@ -152,7 +203,7 @@ export async function decryptDataFromVault<T = unknown>(
 
   const verifyChecksum = await computeSha256Checksum(plaintext);
   if (verifyChecksum !== vault.checksum) {
-    throw new Error('Vault integrity check failed. Data may have been tampered with.');
+    throw new Error('Vault integrity check failed. Cryptographic checksum does not match.');
   }
 
   try {

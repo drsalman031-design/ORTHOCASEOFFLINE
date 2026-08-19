@@ -63,6 +63,16 @@ export function sumAnterior6FromFdi(
   );
 }
 
+/** Maxillary 12 teeth (FDI) — Bolton Overall Ratio (16 to 26). */
+export const BOLTON_MAXILLARY_12_FDI = [
+  '16', '15', '14', '13', '12', '11', '21', '22', '23', '24', '25', '26',
+] as const;
+
+/** Mandibular 12 teeth (FDI) — Bolton Overall Ratio (36 to 46). */
+export const BOLTON_MANDIBULAR_12_FDI = [
+  '46', '45', '44', '43', '42', '41', '31', '32', '33', '34', '35', '36',
+] as const;
+
 export function calculateBolton(toothWidths: Record<string, number | ''>): BoltonResult {
   const getVal = (tooth: string): number => {
     const val = toothWidths[tooth];
@@ -75,11 +85,15 @@ export function calculateBolton(toothWidths: Record<string, number | ''>): Bolto
   const mand12 = mand6 + getVal('46') + getVal('45') + getVal('44') + getVal('34') + getVal('35') + getVal('36');
   const max12 = max6 + getVal('16') + getVal('15') + getVal('14') + getVal('24') + getVal('25') + getVal('26');
 
+  // Input Validation: Bolton Anterior Ratio requires ALL 6 maxillary AND ALL 6 mandibular anterior teeth
+  const hasAllMax6 = MAXILLARY_ANTERIOR_6_FDI.every((t) => getVal(t) > 0);
+  const hasAllMand6 = MANDIBULAR_ANTERIOR_6_FDI.every((t) => getVal(t) > 0);
+
   let anteriorRatio: number | null = null;
-  let anteriorInference = 'Enter 6 anterior tooth widths (13-23 & 33-43)';
+  let anteriorInference = 'Enter all 6 maxillary (13-23) & 6 mandibular (33-43) anterior tooth widths';
   let anteriorBadgeColor: 'green' | 'amber' | 'red' = 'amber';
 
-  if (max6 > 0 && mand6 > 0) {
+  if (hasAllMax6 && hasAllMand6 && max6 > 0) {
     anteriorRatio = (mand6 / max6) * 100;
     const diff = anteriorRatio - 77.2;
     if (Math.abs(diff) < 0.2) {
@@ -96,11 +110,15 @@ export function calculateBolton(toothWidths: Record<string, number | ''>): Bolto
     }
   }
 
+  // Input Validation: Bolton Overall Ratio requires ALL 12 maxillary AND ALL 12 mandibular teeth
+  const hasAllMax12 = BOLTON_MAXILLARY_12_FDI.every((t) => getVal(t) > 0);
+  const hasAllMand12 = BOLTON_MANDIBULAR_12_FDI.every((t) => getVal(t) > 0);
+
   let overallRatio: number | null = null;
-  let overallInference = 'Enter 12 tooth widths (16-26 & 36-46)';
+  let overallInference = 'Enter all 12 maxillary (16-26) & 12 mandibular (36-46) tooth widths';
   let overallBadgeColor: 'green' | 'amber' | 'red' = 'amber';
 
-  if (max12 > 0 && mand12 > 0) {
+  if (hasAllMax12 && hasAllMand12 && max12 > 0) {
     overallRatio = (mand12 / max12) * 100;
     const diff = overallRatio - 91.3;
     if (Math.abs(diff) < 0.2) {
@@ -160,13 +178,26 @@ export function calculateCarey(
   toothWidths: Record<string, number | ''>,
   mandibularArchLengthAvailable: number | ''
 ): CareyResult {
-  const totalToothMaterial = sumCareyMandibularToothMaterial(toothWidths) || sumMaxillaryArchToothMaterial(toothWidths);
+  const totalToothMaterial = sumCareyMandibularToothMaterial(toothWidths);
 
-  if (typeof mandibularArchLengthAvailable !== 'number' || isNaN(mandibularArchLengthAvailable) || totalToothMaterial === 0) {
+  const hasArchLength =
+    typeof mandibularArchLengthAvailable === 'number' &&
+    !isNaN(mandibularArchLengthAvailable) &&
+    mandibularArchLengthAvailable > 0;
+  const hasAll10MandibularTeeth = CAREY_MANDIBULAR_TEETH.every((t) => getToothWidthMm(toothWidths, t) > 0);
+
+  if (!hasArchLength || !hasAll10MandibularTeeth) {
+    let inference = 'Enter Mandibular Arch Length Available and all 10 Tooth Widths (35 to 45)';
+    if (!hasArchLength && hasAll10MandibularTeeth) {
+      inference = 'Enter Mandibular Arch Length Available';
+    } else if (hasArchLength && !hasAll10MandibularTeeth) {
+      inference = 'Enter all 10 Mandibular Tooth Widths (35 to 45)';
+    }
+
     return {
       totalToothMaterial,
       discrepancy: null,
-      inference: 'Enter Arch Length Available and Tooth Widths',
+      inference,
       badgeColor: 'amber',
     };
   }
@@ -205,6 +236,7 @@ export function calculateCarey(
 /** Maxillary premolars summed for Pont's 4-4 crown reference (14, 15, 24, 25). */
 export const PONTS_PM_44_TEETH = ['14', '15', '24', '25'] as const;
 export const PONTS_M_66_TEETH = ['16', '17', '26', '27'] as const;
+export const PONTS_MAXILLARY_INCISORS = ['12', '11', '21', '22'] as const;
 
 export function sumPontsPremolarWidth44(toothWidths: Record<string, number | ''>): number {
   return PONTS_PM_44_TEETH.reduce((sum, tooth) => sum + getToothWidthMm(toothWidths, tooth), 0);
@@ -216,7 +248,7 @@ export function sumPontsMolarWidth66(toothWidths: Record<string, number | ''>): 
 
 /**
  * Pont's Index Analysis:
- * - Sum of Incisors (SI) = 12 + 11 + 21 + 22
+ * - Sum of Incisors (SI) = 12 + 11 + 21 + 22 (All 4 maxillary incisors required)
  * - Expected Premolar Arch Width (MPV) = (SI / 80) * 100
  * - Expected Molar Arch Width (MMV) = (SI / 64) * 100
  * - Transverse Expansion Need = Expected Width - Measured Transverse Caliper Width
@@ -232,6 +264,8 @@ export function calculatePonts(
     getToothWidthMm(toothWidths, '21') +
     getToothWidthMm(toothWidths, '22');
 
+  const hasAll4Incisors = PONTS_MAXILLARY_INCISORS.every((t) => getToothWidthMm(toothWidths, t) > 0);
+
   const measuredPremolarWidth =
     typeof customPremolarWidth === 'number' && !isNaN(customPremolarWidth) && customPremolarWidth > 0
       ? customPremolarWidth
@@ -242,16 +276,16 @@ export function calculatePonts(
       ? customMolarWidth
       : 0;
 
-  if (sumOfIncisors === 0) {
+  if (!hasAll4Incisors || sumOfIncisors === 0) {
     return {
-      sumOfIncisors: 0,
+      sumOfIncisors,
       measuredPremolarWidth,
       measuredMolarWidth,
       calculatedMPV: null,
       calculatedMMV: null,
       premolarExpansionNeeded: null,
       molarExpansionNeeded: null,
-      inference: 'Enter widths of 4 maxillary incisors (12, 11, 21, 22)',
+      inference: 'Enter widths of all 4 maxillary incisors (12, 11, 21, 22)',
       badgeColor: 'amber',
     };
   }

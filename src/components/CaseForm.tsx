@@ -97,6 +97,7 @@ import {
   SnFhCorrectionAnalysisData,
   ExtraoralPhotos,
   ExtraoralPhotoAnalysis,
+  SmileAssessmentData,
   IntraoralPhotos,
   CephLandmarkModuleData,
 } from '../types';
@@ -349,6 +350,9 @@ export const CaseForm: React.FC<CaseFormProps> = ({ initialPatient, onSavePatien
   );
   const [extraoralPhotoAnalysis, setExtraoralPhotoAnalysis] = useState<ExtraoralPhotoAnalysis>(
     initialPatient?.extraoralPhotoAnalysis || {}
+  );
+  const [smileAssessment, setSmileAssessment] = useState<SmileAssessmentData>(
+    initialPatient?.smileAssessment || initialPatient?.extraoralProfile?.smileAssessment || {}
   );
   const [built, setBuilt] = useState(initialPatient?.extraoralProfile?.built || 'Average');
   const [heightCm, setHeightCm] = useState<number | ''>(initialPatient?.extraoralProfile?.heightCm || 165);
@@ -620,9 +624,11 @@ export const CaseForm: React.FC<CaseFormProps> = ({ initialPatient, onSavePatien
         mentolabialSulcus,
         clinicalFma,
         vto,
+        smileAssessment,
       },
       extraoralPhotos,
       extraoralPhotoAnalysis,
+      smileAssessment,
       functionalTmj: {
         respiration,
         speech,
@@ -1232,6 +1238,8 @@ export const CaseForm: React.FC<CaseFormProps> = ({ initialPatient, onSavePatien
             setClinicalFma={setClinicalFma}
             vto={vto}
             setVto={setVto}
+            smileAssessment={smileAssessment}
+            setSmileAssessment={setSmileAssessment}
           />
         )}
 

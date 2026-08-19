@@ -42,9 +42,10 @@ export function calculateLineAngle(p1: Point2D, p2: Point2D): number {
 }
 
 /**
- * Calculates acute angle between two vectors/lines defined by pairs of points.
+ * Calculates acute angle (0° - 90°) between two vectors/lines defined by pairs of points.
+ * Used when the acute intersection angle between planes is specifically needed.
  */
-export function calculateAngleBetweenLines(
+export function calculateAcuteLineAngle(
   p1Line1: Point2D,
   p2Line1: Point2D,
   p1Line2: Point2D,
@@ -65,6 +66,44 @@ export function calculateAngleBetweenLines(
 
   if (angleDeg > 90) angleDeg = 180 - angleDeg;
   return Math.round(angleDeg * 10) / 10;
+}
+
+/**
+ * Calculates anatomical angle (0° - 180°) between two vectors defined by pairs of points.
+ * Preserves true obtuse angles (e.g. U1-SN ~102°, Interincisal ~131°, IMPA ~90-95°).
+ */
+export function calculateAnatomicalAngle(
+  p1Line1: Point2D,
+  p2Line1: Point2D,
+  p1Line2: Point2D,
+  p2Line2: Point2D
+): number {
+  const v1 = { x: p2Line1.x - p1Line1.x, y: p2Line1.y - p1Line1.y };
+  const v2 = { x: p2Line2.x - p1Line2.x, y: p2Line2.y - p1Line2.y };
+
+  const dot = v1.x * v2.x + v1.y * v2.y;
+  const mag1 = Math.sqrt(v1.x * v1.x + v1.y * v1.y);
+  const mag2 = Math.sqrt(v2.x * v2.x + v2.y * v2.y);
+
+  if (mag1 === 0 || mag2 === 0) return 0;
+
+  let cosTheta = dot / (mag1 * mag2);
+  cosTheta = Math.max(-1, Math.min(1, cosTheta));
+  const angleDeg = (Math.acos(cosTheta) * 180) / Math.PI;
+  return Math.round(angleDeg * 10) / 10;
+}
+
+/**
+ * Default alias for line angle calculation.
+ * Preserves 0° - 180° range for cephalometric anatomical validity.
+ */
+export function calculateAngleBetweenLines(
+  p1Line1: Point2D,
+  p2Line1: Point2D,
+  p1Line2: Point2D,
+  p2Line2: Point2D
+): number {
+  return calculateAnatomicalAngle(p1Line1, p2Line1, p1Line2, p2Line2);
 }
 
 /**
@@ -99,13 +138,38 @@ export function calculateLineIntersection(eq1: LineEquation, eq2: LineEquation):
 }
 
 /**
- * Calculates perpendicular distance from Point (x0, y0) to Line Ax + By + C = 0 in pixels.
+ * Calculates absolute perpendicular distance from Point (x0, y0) to Line Ax + By + C = 0 in pixels.
  */
 export function calculatePerpendicularDistance(point: Point2D, line: LineEquation): number {
   const numerator = Math.abs(line.a * point.x + line.b * point.y + line.c);
   const denominator = Math.sqrt(line.a * line.a + line.b * line.b);
   if (denominator === 0) return 0;
   return numerator / denominator;
+}
+
+/**
+ * Calculates signed perpendicular distance from Point (x0, y0) to Line Ax + By + C = 0 in pixels.
+ * Sign convention:
+ * - Positive (+) indicates the point is anterior (protrusive) relative to the profile line.
+ * - Negative (-) indicates the point is posterior (retrusive) relative to the profile line.
+ * - Zero (0) indicates the point lies precisely on the line.
+ */
+export function calculateSignedPerpendicularDistance(
+  point: Point2D,
+  line: LineEquation,
+  isFacingRight: boolean = true
+): number {
+  const denominator = Math.sqrt(line.a * line.a + line.b * line.b);
+  if (denominator === 0) return 0;
+
+  let signedVal = (line.a * point.x + line.b * point.y + line.c) / denominator;
+
+  if (line.a !== 0) {
+    signedVal = line.a > 0 ? signedVal : -signedVal;
+    if (!isFacingRight) signedVal = -signedVal;
+  }
+
+  return signedVal;
 }
 
 /**
@@ -379,7 +443,7 @@ export function runGeometryEngine(
   // FMA (FH to MP)
   if (porion && orbitale && gonion && (menton || gnathion)) {
     const mpEnd = menton || gnathion!;
-    const val = calculateAngleBetweenLines(porion, orbitale, gonion, mpEnd);
+    const val = calculateAcuteLineAngle(porion, orbitale, gonion, mpEnd);
     angles.push({
       id: 'fma',
       name: 'FMA (FH to Mandibular Plane)',
@@ -397,7 +461,7 @@ export function runGeometryEngine(
   // SN-MP
   if (sella && nasion && gonion && (menton || gnathion)) {
     const mpEnd = menton || gnathion!;
-    const val = calculateAngleBetweenLines(sella, nasion, gonion, mpEnd);
+    const val = calculateAcuteLineAngle(sella, nasion, gonion, mpEnd);
     angles.push({
       id: 'sn_mp',
       name: 'SN-MP Angle',
@@ -412,10 +476,10 @@ export function runGeometryEngine(
     });
   }
 
-  // PP-MP
+  // PP-MP (Palatal to Mandibular Plane) - Acute line angle
   if (ans && pns && gonion && (menton || gnathion)) {
     const mpEnd = menton || gnathion!;
-    const val = calculateAngleBetweenLines(ans, pns, gonion, mpEnd);
+    const val = calculateAcuteLineAngle(ans, pns, gonion, mpEnd);
     angles.push({
       id: 'pp_mp',
       name: 'PP-MP (Palatal to Mandibular Plane)',
@@ -432,7 +496,7 @@ export function runGeometryEngine(
 
   // Y-Axis Angle
   if (sella && gnathion && porion && orbitale) {
-    const val = calculateAngleBetweenLines(sella, gnathion, porion, orbitale);
+    const val = calculateAcuteLineAngle(sella, gnathion, porion, orbitale);
     angles.push({
       id: 'y_axis_angle',
       name: 'Y-Axis Angle (S-Gn to FH)',
@@ -449,7 +513,7 @@ export function runGeometryEngine(
 
   // Facial Axis Angle
   if (ptPoint && gnathion && basion && nasion) {
-    const val = calculateAngleBetweenLines(ptPoint, gnathion, basion, nasion);
+    const val = calculateAnatomicalAngle(ptPoint, gnathion, basion, nasion);
     angles.push({
       id: 'facial_axis_angle',
       name: 'Facial Axis Angle (Pt-Gn to Ba-N)',
@@ -466,7 +530,7 @@ export function runGeometryEngine(
 
   // U1 to SN
   if (u1Apex && u1Tip && sella && nasion) {
-    const val = calculateAngleBetweenLines(u1Apex, u1Tip, sella, nasion);
+    const val = calculateAnatomicalAngle(u1Apex, u1Tip, sella, nasion);
     angles.push({
       id: 'u1_sn',
       name: 'U1 to SN Angle',
@@ -484,7 +548,7 @@ export function runGeometryEngine(
   // IMPA (L1 to MP)
   if (l1Apex && l1Tip && gonion && (menton || gnathion)) {
     const mpEnd = menton || gnathion!;
-    const val = calculateAngleBetweenLines(l1Apex, l1Tip, gonion, mpEnd);
+    const val = calculateAnatomicalAngle(l1Tip, l1Apex, gonion, mpEnd);
     angles.push({
       id: 'impa',
       name: 'IMPA (L1 to Mandibular Plane)',
@@ -501,7 +565,7 @@ export function runGeometryEngine(
 
   // Interincisal Angle
   if (u1Apex && u1Tip && l1Apex && l1Tip) {
-    const val = calculateAngleBetweenLines(u1Apex, u1Tip, l1Apex, l1Tip);
+    const val = calculateAnatomicalAngle(u1Apex, u1Tip, l1Apex, l1Tip);
     angles.push({
       id: 'interincisal',
       name: 'Interincisal Angle (U1-L1)',
@@ -549,10 +613,13 @@ export function runGeometryEngine(
     });
   }
 
+  // Determine lateral cephalogram facing direction (+X is anterior when facing right)
+  const isFacingRight = (orbitale && porion) ? (orbitale.x > porion.x) : true;
+
   // Lower Lip to E-Line
   if (prn && softPog && labInferius) {
     const eLineEq = calculateLineEquation(prn, softPog);
-    const distPx = calculatePerpendicularDistance(labInferius, eLineEq);
+    const distPx = calculateSignedPerpendicularDistance(labInferius, eLineEq, isFacingRight);
     const distMm = Math.round((distPx / pxToMm) * 10) / 10;
     linears.push({
       id: 'lower_lip_eline',
@@ -566,7 +633,7 @@ export function runGeometryEngine(
   // Upper Lip to E-Line
   if (prn && softPog && labSuperius) {
     const eLineEq = calculateLineEquation(prn, softPog);
-    const distPx = calculatePerpendicularDistance(labSuperius, eLineEq);
+    const distPx = calculateSignedPerpendicularDistance(labSuperius, eLineEq, isFacingRight);
     const distMm = Math.round((distPx / pxToMm) * 10) / 10;
     linears.push({
       id: 'upper_lip_eline',

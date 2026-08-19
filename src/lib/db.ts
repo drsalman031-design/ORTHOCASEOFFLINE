@@ -294,7 +294,7 @@ export async function updatePatientForUser(
 /**
  * Exports entire logbook as an AES-GCM-256 Encrypted .orthocase Vault
  */
-export async function exportEncryptedVault(passphrase: string): Promise<string> {
+export async function exportEncryptedVault(passphrase?: string): Promise<string> {
   const patients = await getAllPatients();
   const profile = await getStudentProfile();
 
@@ -306,14 +306,51 @@ export async function exportEncryptedVault(passphrase: string): Promise<string> 
     patients,
   };
 
-  const encryptedVault = await encryptDataToVault(exportPayload, passphrase);
+  const encryptedVault = await encryptDataToVault(exportPayload, passphrase, {
+    recordCount: patients.length,
+  });
   return JSON.stringify(encryptedVault, null, 2);
+}
+
+/**
+ * High-Level One-Click Backup function for Settings page
+ */
+export async function backupDatabaseToLocalVault(customPassphrase?: string): Promise<{
+  payload: string;
+  filename: string;
+  count: number;
+}> {
+  const patients = await getAllPatients();
+  const profile = await getStudentProfile();
+
+  const exportPayload = {
+    appName: 'OrthoCase Clinical Logbook',
+    appVersion: '3.4.0',
+    exportedAt: new Date().toISOString(),
+    profile,
+    patients,
+  };
+
+  const encryptedVault = await encryptDataToVault(exportPayload, customPassphrase, {
+    recordCount: patients.length,
+  });
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  const filename = `OrthoCase_Backup_${year}-${month}-${day}.orthocase`;
+
+  return {
+    payload: JSON.stringify(encryptedVault, null, 2),
+    filename,
+    count: patients.length,
+  };
 }
 
 /**
  * Exports a single patient case as an AES-GCM-256 Encrypted .orthocase Vault
  */
-export async function exportSinglePatientVault(patientId: string, passphrase: string): Promise<string> {
+export async function exportSinglePatientVault(patientId: string, passphrase?: string): Promise<string> {
   const patient = await getPatientById(patientId);
   if (!patient) throw new Error('Patient record not found.');
   const profile = await getStudentProfile();
@@ -326,7 +363,9 @@ export async function exportSinglePatientVault(patientId: string, passphrase: st
     patients: [patient],
   };
 
-  const encryptedVault = await encryptDataToVault(exportPayload, passphrase);
+  const encryptedVault = await encryptDataToVault(exportPayload, passphrase, {
+    recordCount: 1,
+  });
   return JSON.stringify(encryptedVault, null, 2);
 }
 
@@ -335,17 +374,36 @@ export async function exportSinglePatientVault(patientId: string, passphrase: st
  */
 export async function importEncryptedVault(
   vaultString: string,
-  passphrase: string,
+  passphrase?: string,
   conflictMode: 'merge' | 'overwrite' = 'merge'
-): Promise<{ count: number; merged: number }> {
-  const parsedVault = JSON.parse(vaultString) as EncryptedVaultPayload;
-  const decryptedData = await decryptDataFromVault<{
+): Promise<{ count: number; merged: number; profileUpdated: boolean }> {
+  let parsedVault: any;
+  try {
+    parsedVault = JSON.parse(vaultString);
+  } catch {
+    throw new Error('Invalid file format. Selected file is not a valid JSON or .orthocase vault.');
+  }
+
+  // Handle encrypted vault format
+  let decryptedData: {
     patients: PatientRecord[];
     profile?: StudentProfile;
-  }>(parsedVault, passphrase);
+  };
+
+  if (parsedVault.format === 'ORTHOCASE_ENCRYPTED_VAULT') {
+    decryptedData = await decryptDataFromVault<{
+      patients: PatientRecord[];
+      profile?: StudentProfile;
+    }>(parsedVault, passphrase);
+  } else if (parsedVault.patients && Array.isArray(parsedVault.patients)) {
+    // Unencrypted legacy JSON fallback
+    decryptedData = parsedVault;
+  } else {
+    throw new Error('Unrecognized backup structure. File does not contain valid OrthoCase records.');
+  }
 
   if (!decryptedData.patients || !Array.isArray(decryptedData.patients)) {
-    throw new Error('Invalid decrypted logbook structure.');
+    throw new Error('Invalid decrypted logbook structure. No patient records found.');
   }
 
   const db = await getDB();
@@ -371,12 +429,25 @@ export async function importEncryptedVault(
 
   await tx.done;
 
-  if (decryptedData.profile) {
+  let profileUpdated = false;
+  if (decryptedData.profile && decryptedData.profile.studentName) {
     await saveStudentProfile(decryptedData.profile);
+    profileUpdated = true;
   }
 
   cachedPatients = null;
-  return { count, merged };
+  return { count, merged, profileUpdated };
+}
+
+/**
+ * High-Level One-Click Restore function for Settings page
+ */
+export async function restoreDatabaseFromLocalVault(
+  vaultString: string,
+  customPassphrase?: string,
+  conflictMode: 'merge' | 'overwrite' = 'merge'
+): Promise<{ count: number; merged: number; profileUpdated: boolean }> {
+  return await importEncryptedVault(vaultString, customPassphrase, conflictMode);
 }
 
 // Plaintext JSON Export & Import (Legacy Support)

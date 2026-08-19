@@ -11,6 +11,8 @@ import {
   Building2,
   Loader2,
   Check,
+  KeyRound,
+  ShieldCheck,
 } from 'lucide-react';
 import { UserAccount } from '../types';
 import {
@@ -19,6 +21,8 @@ import {
   setCachedDeptCode,
   lookupDeptCode,
   setCachedSessionToken,
+  authenticateUserLocally,
+  resetUserPasswordLocally,
 } from '../lib/authContext';
 
 interface LoginScreenProps {
@@ -34,14 +38,13 @@ export const LoginScreen: React.FC<LoginScreenProps> = React.memo(({ onLoginSucc
       return true;
     }
   });
-  const [forgotPasswordOpen, setForgotPasswordOpen] = useState(false);
-  const [googleModalOpen, setGoogleModalOpen] = useState(false);
-  const [googleLoading, setGoogleLoading] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-  const [customGoogleEmail, setCustomGoogleEmail] = useState('');
-  const [customGoogleName, setCustomGoogleName] = useState('');
 
-  // Cached Form State
+  // State
+  const [forgotPasswordOpen, setForgotPasswordOpen] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  // Cached Form State (Institutional Email / Roll Number)
   const [email, setEmail] = useState(() => {
     try {
       return localStorage.getItem('orthocase_remembered_email') || '';
@@ -51,11 +54,15 @@ export const LoginScreen: React.FC<LoginScreenProps> = React.memo(({ onLoginSucc
   });
   const [password, setPassword] = useState('');
   const [deptCode, setDeptCodeState] = useState(() => getCachedDeptCode());
-  const [resetEmail, setResetEmail] = useState('');
-  const [resetSuccess, setResetSuccess] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  // Cached Department info lookup
+  // Forgot Password / Offline Recovery Form State
+  const [resetIdentifier, setResetIdentifier] = useState('');
+  const [resetRecoveryCode, setResetRecoveryCode] = useState('');
+  const [resetNewPassword, setResetNewPassword] = useState('');
+  const [resetError, setResetError] = useState<string | null>(null);
+  const [resetSuccessMsg, setResetSuccessMsg] = useState<string | null>(null);
+
+  // Department info lookups
   const deptInfo = useMemo(() => lookupDeptCode(deptCode), [deptCode]);
 
   const handleDeptCodeChange = useCallback((code: string) => {
@@ -63,99 +70,97 @@ export const LoginScreen: React.FC<LoginScreenProps> = React.memo(({ onLoginSucc
     setCachedDeptCode(code);
   }, []);
 
-  const handleSubmit = useCallback((e: React.FormEvent) => {
-    e.preventDefault();
-    setErrorMessage(null);
-    setSubmitting(true);
+  /**
+   * Offline-First Local Authentication Handler:
+   * Validates credentials directly against the local device database without requiring internet access.
+   */
+  const handleSubmit = useCallback(
+    (e: React.FormEvent) => {
+      e.preventDefault();
+      setErrorMessage(null);
+      setSubmitting(true);
 
-    // Save email preference only (Never store passwords)
-    try {
-      localStorage.setItem('orthocase_remember_me', String(rememberMe));
-      if (rememberMe && email.trim()) {
-        localStorage.setItem('orthocase_remembered_email', email.trim());
-      } else if (!rememberMe) {
-        localStorage.removeItem('orthocase_remembered_email');
-      }
-      setCachedDeptCode(deptCode);
-    } catch {}
-
-    // Simulated async token generation & local verification
-    window.requestAnimationFrame(() => {
-      setTimeout(() => {
-        setSubmitting(false);
-        const trimmedEmail = email.trim();
-
-        if (!trimmedEmail) {
-          setErrorMessage('Please enter your institutional email or roll number to sign in.');
-          return;
+      try {
+        localStorage.setItem('orthocase_remember_me', String(rememberMe));
+        if (rememberMe && email.trim()) {
+          localStorage.setItem('orthocase_remembered_email', email.trim());
+        } else if (!rememberMe) {
+          localStorage.removeItem('orthocase_remembered_email');
         }
+        setCachedDeptCode(deptCode);
+      } catch {}
 
-        const sessionToken = `jwt-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
-        setCachedSessionToken(sessionToken, rememberMe);
+      window.requestAnimationFrame(() => {
+        setTimeout(() => {
+          setSubmitting(false);
+          const result = authenticateUserLocally(email, password, deptCode);
 
-        const newUser: UserAccount = {
-          id: `usr-${Date.now()}`,
-          name: trimmedEmail.split('@')[0] || 'Clinician',
-          role: 'STUDENT',
-          email: trimmedEmail.includes('@') ? trimmedEmail : `${trimmedEmail.toLowerCase()}@institution.edu`,
-          designation: 'Resident / Clinician',
-          rollNumber: trimmedEmail.includes('@') ? 'ORTHO-PG' : trimmedEmail.toUpperCase(),
-          institution: deptInfo.institution || 'Department of Orthodontics & Dentofacial Orthopedics',
-          department: deptInfo.name || 'Orthodontics',
-          authProvider: 'institutional',
-          lastAuthenticatedAt: new Date().toISOString(),
-        };
+          if (!result.success || !result.user) {
+            setErrorMessage(result.error || 'Authentication failed. Please check your credentials.');
+            return;
+          }
 
-        const persistedUser = setSecureAuthSession(newUser, sessionToken, 'institutional');
-        onLoginSuccess(persistedUser);
-      }, 250);
-    });
-  }, [email, rememberMe, deptCode, deptInfo, onLoginSuccess]);
+          const sessionToken = `jwt-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+          setCachedSessionToken(sessionToken, rememberMe);
 
-  const handleGoogleAccountSelect = useCallback((googleUser: { name: string; email: string }) => {
-    setGoogleLoading(true);
-    setTimeout(() => {
-      setGoogleLoading(false);
-      setGoogleModalOpen(false);
+          const persistedUser = setSecureAuthSession(result.user, sessionToken, 'institutional');
+          onLoginSuccess(persistedUser);
+        }, 200);
+      });
+    },
+    [email, password, rememberMe, deptCode, onLoginSuccess]
+  );
 
-      const sessionToken = `google-jwt-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
-      setCachedSessionToken(sessionToken, true);
+  /**
+   * Offline Local Password Recovery Handler:
+   * Verifies Department Code / Master Recovery Key and updates credentials locally.
+   */
+  const handleResetPasswordSubmit = useCallback(
+    (e: React.FormEvent) => {
+      e.preventDefault();
+      setResetError(null);
+      setResetSuccessMsg(null);
 
-      const newUser: UserAccount = {
-        id: `usr-google-${Date.now()}`,
-        name: googleUser.name,
-        role: 'STUDENT',
-        email: googleUser.email,
-        designation: 'PG Resident / Orthodontist',
-        rollNumber: 'ORTHO-GOOGLE-PG',
-        institution: 'Department of Orthodontics & Dentofacial Orthopedics',
-        department: 'Postgraduate Orthodontics',
-        authProvider: 'google',
-        lastAuthenticatedAt: new Date().toISOString(),
-      };
+      if (!resetIdentifier.trim()) {
+        setResetError('Please enter your registered email or roll number.');
+        return;
+      }
+      if (!resetRecoveryCode.trim()) {
+        setResetError('Please enter your Department Recovery Code or Master Key (e.g. ORTHO-2026).');
+        return;
+      }
+      if (!resetNewPassword || resetNewPassword.length < 4) {
+        setResetError('New password must be at least 4 characters long.');
+        return;
+      }
 
-      const persistedUser = setSecureAuthSession(newUser, sessionToken, 'google');
-      onLoginSuccess(persistedUser);
-    }, 300);
-  }, [onLoginSuccess]);
+      const result = resetUserPasswordLocally(
+        resetIdentifier.trim(),
+        resetRecoveryCode.trim(),
+        resetNewPassword
+      );
 
-  const handleCustomGoogleSubmit = useCallback((e: React.FormEvent) => {
-    e.preventDefault();
-    if (!customGoogleEmail.trim()) return;
-    const name = customGoogleName.trim() || customGoogleEmail.split('@')[0];
-    handleGoogleAccountSelect({ name, email: customGoogleEmail.trim() });
-  }, [customGoogleEmail, customGoogleName, handleGoogleAccountSelect]);
+      if (!result.success) {
+        setResetError(result.message);
+        return;
+      }
 
-  const handleForgotPasswordSubmit = useCallback((e: React.FormEvent) => {
-    e.preventDefault();
-    if (!resetEmail.trim()) return;
-    setResetSuccess(true);
-    setTimeout(() => {
-      setResetSuccess(false);
-      setForgotPasswordOpen(false);
-      setResetEmail('');
-    }, 1800);
-  }, [resetEmail]);
+      setResetSuccessMsg(result.message);
+      // Auto populate the login fields with the newly set password
+      setEmail(resetIdentifier.trim());
+      setPassword(resetNewPassword);
+
+      setTimeout(() => {
+        setForgotPasswordOpen(false);
+        setResetSuccessMsg(null);
+        setResetError(null);
+        setResetIdentifier('');
+        setResetRecoveryCode('');
+        setResetNewPassword('');
+      }, 1500);
+    },
+    [resetIdentifier, resetRecoveryCode, resetNewPassword]
+  );
 
   return (
     <div
@@ -197,51 +202,13 @@ export const LoginScreen: React.FC<LoginScreenProps> = React.memo(({ onLoginSucc
           </div>
 
           {errorMessage && (
-            <div className="p-3 rounded-2xl bg-red-50 border border-red-200 text-red-700 text-xs flex items-center gap-2">
+            <div className="p-3 rounded-2xl bg-red-50 border border-red-200 text-red-700 text-xs flex items-center gap-2 animate-in fade-in">
               <AlertCircle className="w-4 h-4 shrink-0" />
               <span>{errorMessage}</span>
             </div>
           )}
 
-          {/* PRIMARY SSO BUTTON: SIGN IN WITH GOOGLE */}
-          <div>
-            <button
-              id="google-login-btn"
-              type="button"
-              onClick={() => setGoogleModalOpen(true)}
-              className="w-full py-3 px-4 rounded-2xl border border-slate-200 bg-white hover:bg-slate-50/90 active:bg-slate-100 text-slate-700 hover:text-slate-900 text-sm font-semibold flex items-center justify-center gap-3 transition-all cursor-pointer shadow-xs active:scale-[0.99]"
-            >
-              <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24">
-                <path
-                  fill="#4285F4"
-                  d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                />
-                <path
-                  fill="#34A853"
-                  d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                />
-                <path
-                  fill="#FBBC05"
-                  d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
-                />
-                <path
-                  fill="#EA4335"
-                  d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
-                />
-              </svg>
-              <span>Sign in with Google</span>
-            </button>
-          </div>
-
-          {/* CLEAN SUBTLE SEPARATOR */}
-          <div className="relative text-center py-0.5">
-            <span className="bg-white px-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest relative z-10">
-              OR SIGN IN WITH EMAIL
-            </span>
-            <div className="absolute top-1/2 left-0 right-0 h-[1px] bg-slate-200 -z-0" />
-          </div>
-
-          {/* EMAIL / INSTITUTIONAL LOGIN FORM */}
+          {/* STREAMLINED EMAIL / INSTITUTIONAL LOGIN FORM */}
           <form onSubmit={handleSubmit} className="space-y-4">
             
             {/* FIELD 1: INSTITUTIONAL EMAIL / ROLL NUMBER */}
@@ -254,9 +221,10 @@ export const LoginScreen: React.FC<LoginScreenProps> = React.memo(({ onLoginSucc
                 <input
                   id="login-email-input"
                   type="text"
+                  required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="name@institution.edu"
+                  placeholder="name@institution.edu or ORTHO-PG-01"
                   className="w-full pl-10 pr-3.5 py-2.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0D52D6] focus:border-transparent focus:bg-white transition-all"
                 />
               </div>
@@ -271,7 +239,10 @@ export const LoginScreen: React.FC<LoginScreenProps> = React.memo(({ onLoginSucc
                 <button
                   id="forgot-password-link"
                   type="button"
-                  onClick={() => setForgotPasswordOpen(true)}
+                  onClick={() => {
+                    setResetIdentifier(email);
+                    setForgotPasswordOpen(true);
+                  }}
                   className="text-xs text-[#0D52D6] hover:text-[#1E40AF] hover:underline font-semibold cursor-pointer transition-colors"
                 >
                   Forgot Password?
@@ -282,6 +253,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = React.memo(({ onLoginSucc
                 <input
                   id="login-password-input"
                   type={showPassword ? 'text' : 'password'}
+                  required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••••••"
@@ -298,14 +270,14 @@ export const LoginScreen: React.FC<LoginScreenProps> = React.memo(({ onLoginSucc
               </div>
             </div>
 
-            {/* FIELD 3: DEPARTMENT / COLLEGE CODE (COMPACT & CACHED LOOKUP) */}
+            {/* FIELD 3: DEPARTMENT / COLLEGE CODE (WITH ACADEMIC VERIFIED BADGE) */}
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
                 <label className="text-xs font-bold text-slate-700 block">
                   Department / College Code
                 </label>
                 <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded-md flex items-center gap-1">
-                  <Check className="w-3 h-3" /> {deptInfo.badge || 'Cached'}
+                  <Check className="w-3 h-3" /> {deptInfo.badge || 'Academic Verified'}
                 </span>
               </div>
               <div className="relative">
@@ -321,7 +293,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = React.memo(({ onLoginSucc
               </div>
               <div className="flex items-center justify-between text-[11px] text-slate-500 px-1">
                 <span className="truncate">{deptInfo.name}</span>
-                <span className="text-[10px] text-blue-600 font-medium shrink-0 ml-2">Synced</span>
+                <span className="text-[10px] text-blue-600 font-medium shrink-0 ml-2">Offline Ready</span>
               </div>
             </div>
 
@@ -344,12 +316,12 @@ export const LoginScreen: React.FC<LoginScreenProps> = React.memo(({ onLoginSucc
               id="submit-login-btn"
               type="submit"
               disabled={submitting}
-              className="w-full py-3 px-4 rounded-2xl bg-[#0D52D6] hover:bg-[#1565C0] active:bg-[#0B44B3] text-white font-bold text-sm shadow-md shadow-blue-600/20 cursor-pointer flex items-center justify-center gap-2 active:scale-[0.99] transition-all disabled:opacity-75 disabled:cursor-not-allowed"
+              className="w-full py-3.5 px-4 rounded-2xl bg-[#0D52D6] hover:bg-[#1565C0] active:bg-[#0B44B3] text-white font-bold text-sm shadow-md shadow-blue-600/20 cursor-pointer flex items-center justify-center gap-2 active:scale-[0.99] transition-all disabled:opacity-75 disabled:cursor-not-allowed"
             >
               {submitting ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>Signing In...</span>
+                  <span>Signing In to Portal...</span>
                 </>
               ) : (
                 <>
@@ -360,93 +332,25 @@ export const LoginScreen: React.FC<LoginScreenProps> = React.memo(({ onLoginSucc
             </button>
           </form>
         </div>
+
+        {/* FOOTER CREDITS */}
+        <div className="text-center pt-3 pb-1 px-2 space-y-1">
+          <p className="text-xs text-slate-500 font-medium">
+            Developed by <strong className="text-slate-800 font-bold whitespace-nowrap">Dr. Salman, MDS Orthodontist</strong>
+          </p>
+          <p className="text-xs text-slate-500 font-medium">
+            in collaboration with <strong className="text-slate-800 font-bold whitespace-nowrap">Dr. Raghu Devanna</strong> and <strong className="text-slate-800 font-bold whitespace-nowrap">Dr. K. Srinivas Karnam</strong>
+          </p>
+        </div>
       </div>
 
-      {/* GOOGLE ACCOUNT SELECTION MODAL */}
-      {googleModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs p-4 flex items-center justify-center animate-fadeIn">
-          <div className="bg-white border border-slate-200 rounded-3xl max-w-sm w-full p-6 text-slate-900 space-y-4 shadow-2xl">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <div className="flex items-center gap-2">
-                <svg className="w-5 h-5" viewBox="0 0 24 24">
-                  <path
-                    fill="#4285F4"
-                    d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                  />
-                  <path
-                    fill="#34A853"
-                    d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                  />
-                  <path
-                    fill="#FBBC05"
-                    d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
-                  />
-                  <path
-                    fill="#EA4335"
-                    d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
-                  />
-                </svg>
-                <h3 className="text-sm font-bold text-slate-900">Choose an Institutional Account</h3>
-              </div>
-              <button
-                type="button"
-                onClick={() => setGoogleModalOpen(false)}
-                className="p-1 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-700 cursor-pointer"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            {googleLoading ? (
-              <div className="py-8 flex flex-col items-center justify-center space-y-3">
-                <Loader2 className="w-8 h-8 text-[#0D52D6] animate-spin" />
-                <p className="text-xs font-semibold text-slate-600">Signing in with Google SSO...</p>
-              </div>
-            ) : (
-              <form onSubmit={handleCustomGoogleSubmit} className="space-y-3">
-                <p className="text-xs text-slate-500">to continue to Ortho Case Academic Portal</p>
-                <div>
-                  <label className="text-[11px] font-bold text-slate-600 block mb-1">Your Name</label>
-                  <input
-                    type="text"
-                    value={customGoogleName}
-                    onChange={(e) => setCustomGoogleName(e.target.value)}
-                    placeholder="Dr. Full Name"
-                    autoFocus
-                    className="w-full p-2.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs text-slate-900 focus:ring-2 focus:ring-[#0D52D6] focus:outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="text-[11px] font-bold text-slate-600 block mb-1">Google Email</label>
-                  <input
-                    type="email"
-                    value={customGoogleEmail}
-                    onChange={(e) => setCustomGoogleEmail(e.target.value)}
-                    placeholder="yourname@gmail.com"
-                    required
-                    className="w-full p-2.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs text-slate-900 focus:ring-2 focus:ring-[#0D52D6] focus:outline-none"
-                  />
-                </div>
-                <button
-                  type="submit"
-                  disabled={!customGoogleEmail.trim()}
-                  className="w-full py-2.5 rounded-2xl bg-[#0D52D6] hover:bg-[#1565C0] disabled:opacity-60 disabled:cursor-not-allowed text-white text-xs font-bold shadow-md cursor-pointer transition-all"
-                >
-                  Continue with Google
-                </button>
-              </form>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* FORGOT PASSWORD MODAL */}
+      {/* OFFLINE LOCAL CREDENTIAL RECOVERY & PIN RESET MODAL */}
       {forgotPasswordOpen && (
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs p-4 flex items-center justify-center animate-fadeIn">
           <div className="bg-white border border-slate-200 rounded-3xl max-w-sm w-full p-6 text-slate-900 space-y-4 shadow-2xl">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                <Mail className="w-4 h-4 text-[#0D52D6]" /> Reset Password
+                <KeyRound className="w-4 h-4 text-[#0D52D6]" /> Local Credential Recovery
               </h3>
               <button
                 type="button"
@@ -457,30 +361,75 @@ export const LoginScreen: React.FC<LoginScreenProps> = React.memo(({ onLoginSucc
               </button>
             </div>
 
-            {resetSuccess ? (
-              <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs text-center space-y-1">
+            {resetSuccessMsg ? (
+              <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs text-center space-y-1.5 animate-in fade-in">
                 <CheckCircle2 className="w-6 h-6 mx-auto text-emerald-600" />
-                <p className="font-bold">Password Reset Link Sent!</p>
-                <p className="text-[11px] text-emerald-700">Check your institutional email for instructions.</p>
+                <p className="font-bold">Password Reset Successful!</p>
+                <p className="text-[11px] text-emerald-700">{resetSuccessMsg}</p>
               </div>
             ) : (
-              <form onSubmit={handleForgotPasswordSubmit} className="space-y-3">
+              <form onSubmit={handleResetPasswordSubmit} className="space-y-3">
                 <p className="text-xs text-slate-600">
-                  Enter your registered institutional email to receive secure password recovery instructions:
+                  Reset your password locally in the clinic database without internet connectivity:
                 </p>
-                <input
-                  type="email"
-                  value={resetEmail}
-                  onChange={(e) => setResetEmail(e.target.value)}
-                  placeholder="name@institution.edu"
-                  required
-                  className="w-full p-2.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs text-slate-900 focus:ring-2 focus:ring-[#0D52D6] focus:outline-none"
-                />
+
+                {resetError && (
+                  <div className="p-2.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs flex items-center gap-1.5">
+                    <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                    <span>{resetError}</span>
+                  </div>
+                )}
+
+                <div>
+                  <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                    Institutional Email / Roll Number
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={resetIdentifier}
+                    onChange={(e) => setResetIdentifier(e.target.value)}
+                    placeholder="name@institution.edu or roll number"
+                    className="w-full p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-900 focus:ring-2 focus:ring-[#0D52D6] focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-[11px] font-bold text-slate-700 block">
+                      Department Recovery Code
+                    </label>
+                    <span className="text-[10px] text-slate-400">Default: ORTHO-2026</span>
+                  </div>
+                  <input
+                    type="text"
+                    required
+                    value={resetRecoveryCode}
+                    onChange={(e) => setResetRecoveryCode(e.target.value.toUpperCase())}
+                    placeholder="ORTHO-2026"
+                    className="w-full p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-mono font-bold text-slate-900 uppercase focus:ring-2 focus:ring-[#0D52D6] focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                    New Local Password
+                  </label>
+                  <input
+                    type="password"
+                    required
+                    value={resetNewPassword}
+                    onChange={(e) => setResetNewPassword(e.target.value)}
+                    placeholder="••••••••••••"
+                    className="w-full p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-900 focus:ring-2 focus:ring-[#0D52D6] focus:outline-none"
+                  />
+                </div>
+
                 <button
                   type="submit"
-                  className="w-full py-2.5 rounded-2xl bg-[#0D52D6] hover:bg-[#1565C0] text-white font-bold text-xs shadow-md cursor-pointer"
+                  className="w-full py-2.5 rounded-xl bg-[#0D52D6] hover:bg-[#1565C0] text-white font-bold text-xs shadow-md cursor-pointer transition-all"
                 >
-                  Send Recovery Instructions
+                  Reset & Save New Password
                 </button>
               </form>
             )}
@@ -490,4 +439,5 @@ export const LoginScreen: React.FC<LoginScreenProps> = React.memo(({ onLoginSucc
     </div>
   );
 });
+
 

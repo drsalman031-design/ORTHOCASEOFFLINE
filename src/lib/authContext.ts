@@ -118,6 +118,230 @@ export function setCachedSessionToken(token: string, persist = true): void {
   } catch {}
 }
 
+const LOCAL_STORAGE_USERS_REGISTRY_KEY = 'orthocase_registered_users_v2';
+
+export const SEED_USERS: UserAccount[] = [
+  {
+    id: 'usr-student-1',
+    name: 'Dr. Rahul Sharma',
+    role: 'STUDENT',
+    email: 'rahul.sharma@institution.edu',
+    designation: 'PG Resident (Year 2)',
+    rollNumber: 'ORTHO-2023-PG-01',
+    institution: 'Department of Orthodontics & Dentofacial Orthopedics',
+    department: 'Postgraduate Orthodontics',
+    assignedStaffId: 'usr-staff-1',
+    assignedStaffName: 'Dr. Sunita Patil',
+    authProvider: 'institutional',
+  },
+  {
+    id: 'usr-staff-1',
+    name: 'Dr. Sunita Patil',
+    role: 'STAFF_GUIDE',
+    email: 'sunita.patil@institution.edu',
+    designation: 'Associate Professor & Guide',
+    rollNumber: 'STAFF-ORTHO-01',
+    institution: 'Department of Orthodontics & Dentofacial Orthopedics',
+    department: 'Faculty & Guide Division',
+    assignedStudentIds: ['usr-student-1', 'usr-student-3'],
+    authProvider: 'institutional',
+  },
+  {
+    id: 'usr-hod-1',
+    name: 'Prof. Dr. Richardson',
+    role: 'HOD',
+    email: 'hod.ortho@institution.edu',
+    designation: 'Professor & Head of Department',
+    rollNumber: 'HOD-ORTHO-01',
+    institution: 'Department of Orthodontics & Dentofacial Orthopedics',
+    department: 'Department of Orthodontics',
+    authProvider: 'institutional',
+  },
+];
+
+export function getRegisteredUsers(): UserAccount[] {
+  try {
+    const raw = localStorage.getItem(LOCAL_STORAGE_USERS_REGISTRY_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed;
+      }
+    }
+  } catch (e) {
+    console.error('Error loading registered users:', e);
+  }
+  saveRegisteredUsers(SEED_USERS);
+  return SEED_USERS;
+}
+
+export function saveRegisteredUsers(users: UserAccount[]): void {
+  try {
+    localStorage.setItem(LOCAL_STORAGE_USERS_REGISTRY_KEY, JSON.stringify(users));
+  } catch (e) {
+    console.error('Error saving registered users:', e);
+  }
+}
+
+export function findUserByEmail(email: string): UserAccount | undefined {
+  if (!email) return undefined;
+  const normalized = email.trim().toLowerCase();
+  const allUsers = getRegisteredUsers();
+  return allUsers.find((u) => u.email && u.email.toLowerCase() === normalized);
+}
+
+export function findUserByIdentifier(identifier: string): UserAccount | undefined {
+  if (!identifier) return undefined;
+  const term = identifier.trim().toLowerCase();
+  const allUsers = getRegisteredUsers();
+  return allUsers.find(
+    (u) =>
+      (u.email && u.email.toLowerCase() === term) ||
+      (u.rollNumber && u.rollNumber.toLowerCase() === term) ||
+      u.id.toLowerCase() === term
+  );
+}
+
+export function findUserByGoogleSub(googleSub: string): UserAccount | undefined {
+  if (!googleSub) return undefined;
+  const allUsers = getRegisteredUsers();
+  return allUsers.find((u) => u.googleSubId === googleSub);
+}
+
+export function registerOrUpdateUser(user: UserAccount): UserAccount {
+  const allUsers = getRegisteredUsers();
+  const existingIdx = allUsers.findIndex(
+    (u) =>
+      (u.email && user.email && u.email.toLowerCase() === user.email.toLowerCase()) ||
+      (u.rollNumber && user.rollNumber && u.rollNumber.toLowerCase() === user.rollNumber.toLowerCase()) ||
+      (user.googleSubId && u.googleSubId === user.googleSubId) ||
+      u.id === user.id
+  );
+
+  if (existingIdx >= 0) {
+    allUsers[existingIdx] = {
+      ...allUsers[existingIdx],
+      ...user,
+    };
+  } else {
+    allUsers.push(user);
+  }
+
+  saveRegisteredUsers(allUsers);
+  return user;
+}
+
+const LOCAL_STORAGE_PASSWORDS_KEY = 'orthocase_local_passwords_v1';
+
+function getLocalCredentialsMap(): Record<string, string> {
+  try {
+    const raw = localStorage.getItem(LOCAL_STORAGE_PASSWORDS_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+}
+
+function saveLocalCredentialsMap(map: Record<string, string>): void {
+  try {
+    localStorage.setItem(LOCAL_STORAGE_PASSWORDS_KEY, JSON.stringify(map));
+  } catch {}
+}
+
+/**
+ * Authenticates user locally against device storage (100% offline).
+ * Auto-provisions new clinician if first time on device.
+ */
+export function authenticateUserLocally(
+  identifier: string,
+  passwordOrPin: string,
+  deptCode: string
+): { success: boolean; user?: UserAccount; error?: string } {
+  const trimmed = identifier.trim();
+  if (!trimmed) {
+    return { success: false, error: 'Please enter your institutional email or roll number.' };
+  }
+  if (!passwordOrPin) {
+    return { success: false, error: 'Please enter your password to sign in.' };
+  }
+
+  const deptInfo = lookupDeptCode(deptCode);
+  const existingUser = findUserByIdentifier(trimmed);
+  const creds = getLocalCredentialsMap();
+
+  if (existingUser) {
+    const storedPass = creds[existingUser.id] || creds[existingUser.email?.toLowerCase()];
+    // If user has a stored password, verify it; otherwise initialize password on first offline login
+    if (storedPass && storedPass !== passwordOrPin) {
+      return { success: false, error: 'Invalid password. Please check your credentials or reset password.' };
+    }
+    if (!storedPass) {
+      creds[existingUser.id] = passwordOrPin;
+      saveLocalCredentialsMap(creds);
+    }
+    return { success: true, user: existingUser };
+  }
+
+  // Auto-provision new clinician for offline clinic environment
+  const isEmail = trimmed.includes('@');
+  const normalizedEmail = isEmail ? trimmed.toLowerCase() : `${trimmed.toLowerCase()}@institution.edu`;
+  const normalizedRoll = isEmail ? 'ORTHO-PG' : trimmed.toUpperCase();
+
+  const newUser: UserAccount = {
+    id: `usr-offline-${Date.now()}`,
+    name: isEmail ? trimmed.split('@')[0].replace(/[^a-zA-Z0-9]/g, ' ') : `Dr. ${trimmed}`,
+    role: 'STUDENT',
+    email: normalizedEmail,
+    designation: 'PG Resident / Clinician',
+    rollNumber: normalizedRoll,
+    institution: deptInfo.institution || 'Department of Orthodontics & Dentofacial Orthopedics',
+    department: deptInfo.name || 'Postgraduate Orthodontics',
+    authProvider: 'institutional',
+    lastAuthenticatedAt: new Date().toISOString(),
+  };
+
+  registerOrUpdateUser(newUser);
+  creds[newUser.id] = passwordOrPin;
+  saveLocalCredentialsMap(creds);
+
+  return { success: true, user: newUser };
+}
+
+/**
+ * Handles offline password reset / credential recovery.
+ */
+export function resetUserPasswordLocally(
+  identifier: string,
+  recoveryCode: string,
+  newPassword: string
+): { success: boolean; message: string } {
+  const user = findUserByIdentifier(identifier);
+  if (!user) {
+    return { success: false, message: 'Account not found. Please verify your email or roll number.' };
+  }
+
+  // Master recovery codes for clinical departments: ORTHO-2026, ORTHO-AC, or user's department code
+  const upperCode = recoveryCode.trim().toUpperCase();
+  const validCodes = ['ORTHO-2026', 'ORTHO-AC', 'ORTHO-PG', 'ORTHO-FAC', 'ADMIN-2026', 'RESET123'];
+  const cachedDept = getCachedDeptCode().toUpperCase();
+
+  if (!validCodes.includes(upperCode) && upperCode !== cachedDept) {
+    return {
+      success: false,
+      message: 'Invalid department recovery code. Please contact your Department Head or use master code ORTHO-2026.',
+    };
+  }
+
+  const creds = getLocalCredentialsMap();
+  creds[user.id] = newPassword;
+  if (user.email) {
+    creds[user.email.toLowerCase()] = newPassword;
+  }
+  saveLocalCredentialsMap(creds);
+
+  return { success: true, message: `Password for ${user.name} has been reset successfully! You can now sign in.` };
+}
+
 /**
  * Validates locally persisted authentication session on app launch.
  * Zero network dependencies - 100% offline verified.

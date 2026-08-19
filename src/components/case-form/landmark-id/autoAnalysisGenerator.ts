@@ -17,9 +17,12 @@ import {
   calculateDistance,
   calculateLineAngle,
   calculateAngleBetweenLines,
+  calculateAnatomicalAngle,
+  calculateAcuteLineAngle,
   calculateVertexAngle,
   calculateLineEquation,
   calculatePerpendicularDistance,
+  calculateSignedPerpendicularDistance,
 } from './geometryEngine';
 
 export interface AutoAnalysisResult {
@@ -115,6 +118,9 @@ export function autoGenerateAllCephAnalyses(
   const mpStart = gonion;
   const mpEnd = menton || gnathion;
 
+  // Determine lateral cephalogram facing direction (+X is anterior when facing right)
+  const isFacingRight = (orbitale && porion) ? (orbitale.x > porion.x) : (nasion && sella ? nasion.x > sella.x : true);
+
   // 1. STEINER'S ANALYSIS
   const steinersParams: Record<string, number | ''> = {};
   if (sella && nasion && pointA) {
@@ -127,69 +133,86 @@ export function autoGenerateAllCephAnalyses(
     steinersParams.anb = Math.round((steinersParams.sna - steinersParams.snb) * 10) / 10;
   }
   if (sella && nasion && occStart && occEnd) {
-    steinersParams.occlusalPlaneAngle = calculateAngleBetweenLines(sella, nasion, occStart, occEnd);
+    steinersParams.occlusalPlaneAngle = calculateAcuteLineAngle(sella, nasion, occStart, occEnd);
   }
   if (sella && nasion && mpStart && mpEnd) {
-    steinersParams.mandibularPlaneAngle = calculateAngleBetweenLines(sella, nasion, mpStart, mpEnd);
+    steinersParams.mandibularPlaneAngle = calculateAcuteLineAngle(sella, nasion, mpStart, mpEnd);
   }
   if (u1Tip && nasion && pointA) {
     const naEq = calculateLineEquation(nasion, pointA);
-    const distPx = calculatePerpendicularDistance(u1Tip, naEq);
+    const distPx = calculateSignedPerpendicularDistance(u1Tip, naEq, isFacingRight);
     steinersParams.upperIncisorToNaMm = Math.round((distPx / pxToMm) * 10) / 10;
   }
   if (u1Apex && u1Tip && nasion && pointA) {
-    steinersParams.upperIncisorToNaDeg = calculateAngleBetweenLines(u1Apex, u1Tip, nasion, pointA);
+    steinersParams.upperIncisorToNaDeg = calculateAnatomicalAngle(u1Apex, u1Tip, nasion, pointA);
   }
   if (l1Tip && nasion && pointB) {
     const nbEq = calculateLineEquation(nasion, pointB);
-    const distPx = calculatePerpendicularDistance(l1Tip, nbEq);
+    const distPx = calculateSignedPerpendicularDistance(l1Tip, nbEq, isFacingRight);
     steinersParams.lowerIncisorToNbMm = Math.round((distPx / pxToMm) * 10) / 10;
   }
   if (l1Apex && l1Tip && nasion && pointB) {
-    steinersParams.lowerIncisorToNbDeg = calculateAngleBetweenLines(l1Apex, l1Tip, nasion, pointB);
+    steinersParams.lowerIncisorToNbDeg = calculateAnatomicalAngle(l1Apex, l1Tip, nasion, pointB);
   }
   if (u1Apex && u1Tip && l1Apex && l1Tip) {
-    steinersParams.interincisalAngle = calculateAngleBetweenLines(u1Apex, u1Tip, l1Apex, l1Tip);
+    steinersParams.interincisalAngle = calculateAnatomicalAngle(u1Apex, u1Tip, l1Apex, l1Tip);
   }
   if ((softNasion || pronasale) && softPog && (labSuperius || labInferius)) {
     const sLineP1 = pronasale || softNasion!;
     const sLineEq = calculateLineEquation(sLineP1, softPog);
     const lip = labSuperius || labInferius!;
-    const distPx = calculatePerpendicularDistance(lip, sLineEq);
+    const distPx = calculateSignedPerpendicularDistance(lip, sLineEq, isFacingRight);
     steinersParams.steinersSLine = Math.round((distPx / pxToMm) * 10) / 10;
   }
 
   // 2. DOWNS ANALYSIS
   const downsParams: Record<string, number | ''> = {};
   if (porion && orbitale && nasion && pogonion) {
-    downsParams.facialAngle = calculateAngleBetweenLines(porion, orbitale, nasion, pogonion);
+    downsParams.facialAngle = calculateAcuteLineAngle(porion, orbitale, nasion, pogonion);
   }
   if (nasion && pointA && pogonion) {
-    downsParams.angleConvexity = calculateVertexAngle(pointA, nasion, pogonion);
+    // Downs Angle of Convexity (N-A-Pog): Deviation from straight profile (180° -> 0.0° norm)
+    // Positive (+) = Point A anterior to N-Pog (convex / Class II)
+    // Negative (-) = Point A posterior to N-Pog (concave / Class III)
+    const vAngle = calculateVertexAngle(pointA, nasion, pogonion);
+    const dev = Math.abs(180 - vAngle);
+    const npogEq = calculateLineEquation(nasion, pogonion);
+    const distPx = calculateSignedPerpendicularDistance(pointA, npogEq, isFacingRight);
+    const sign = distPx > 0.05 ? 1 : distPx < -0.05 ? -1 : 0;
+    downsParams.angleConvexity = Math.round(sign * dev * 10) / 10;
   }
   if (pointA && pointB && nasion && pogonion) {
-    downsParams.abPlane = calculateAngleBetweenLines(pointA, pointB, nasion, pogonion);
+    // Downs A-B Plane Angle (AB to N-Pog): Norm -4.6° (-8.9° to 0.0°)
+    // Negative (-) = Point B posterior to Point A relative to facial plane (Class I/II)
+    // Positive (+) = Point B anterior to Point A relative to facial plane (Class III)
+    const acuteAngle = calculateAcuteLineAngle(pointA, pointB, nasion, pogonion);
+    const npogEq = calculateLineEquation(nasion, pogonion);
+    const distA = calculateSignedPerpendicularDistance(pointA, npogEq, isFacingRight);
+    const distB = calculateSignedPerpendicularDistance(pointB, npogEq, isFacingRight);
+    const diff = distB - distA;
+    const sign = diff > 0.05 ? 1 : diff < -0.05 ? -1 : 0;
+    downsParams.abPlane = Math.round(sign * acuteAngle * 10) / 10;
   }
   if (porion && orbitale && mpStart && mpEnd) {
-    downsParams.mandibularPlaneAngle = calculateAngleBetweenLines(porion, orbitale, mpStart, mpEnd);
+    downsParams.mandibularPlaneAngle = calculateAcuteLineAngle(porion, orbitale, mpStart, mpEnd);
   }
   if (porion && orbitale && sella && gnathion) {
-    downsParams.yAxis = calculateAngleBetweenLines(porion, orbitale, sella, gnathion);
+    downsParams.yAxis = calculateAcuteLineAngle(porion, orbitale, sella, gnathion);
   }
   if (porion && orbitale && occStart && occEnd) {
-    downsParams.cantOfOcclusion = calculateAngleBetweenLines(porion, orbitale, occStart, occEnd);
+    downsParams.cantOfOcclusion = calculateAcuteLineAngle(porion, orbitale, occStart, occEnd);
   }
   if (l1Apex && l1Tip && occStart && occEnd) {
-    downsParams.lowerIncisorToOcclusal = calculateAngleBetweenLines(l1Apex, l1Tip, occStart, occEnd);
+    downsParams.lowerIncisorToOcclusal = calculateAnatomicalAngle(l1Apex, l1Tip, occStart, occEnd);
   }
   if (l1Apex && l1Tip && mpStart && mpEnd) {
-    downsParams.impa = calculateAngleBetweenLines(l1Apex, l1Tip, mpStart, mpEnd);
+    downsParams.impa = calculateAnatomicalAngle(l1Tip, l1Apex, mpStart, mpEnd);
   }
   if (u1Apex && u1Tip && l1Apex && l1Tip) {
-    downsParams.interincisalAngle = calculateAngleBetweenLines(u1Apex, u1Tip, l1Apex, l1Tip);
+    downsParams.interincisalAngle = calculateAnatomicalAngle(u1Apex, u1Tip, l1Apex, l1Tip);
   }
   if (u1Apex && u1Tip && porion && orbitale) {
-    downsParams.upperIncisalAngle = calculateAngleBetweenLines(u1Apex, u1Tip, porion, orbitale);
+    downsParams.upperIncisalAngle = calculateAnatomicalAngle(u1Tip, u1Apex, porion, orbitale);
   }
 
   // 3. SCHWARZ & TWEED ANALYSIS
@@ -207,10 +230,10 @@ export function autoGenerateAllCephAnalyses(
     schwarzParams.maxillaryLength = Math.round((calculateDistance(ans, pns) / pxToMm) * 10) / 10;
   }
   if (porion && orbitale && mpStart && mpEnd) {
-    schwarzParams.fmpa = calculateAngleBetweenLines(porion, orbitale, mpStart, mpEnd);
+    schwarzParams.fmpa = calculateAcuteLineAngle(porion, orbitale, mpStart, mpEnd);
   }
   if (l1Apex && l1Tip && mpStart && mpEnd) {
-    schwarzParams.impa = calculateAngleBetweenLines(l1Apex, l1Tip, mpStart, mpEnd);
+    schwarzParams.impa = calculateAnatomicalAngle(l1Tip, l1Apex, mpStart, mpEnd);
   }
   if (typeof schwarzParams.fmpa === 'number' && typeof schwarzParams.impa === 'number') {
     schwarzParams.fmia = Math.round((180 - (schwarzParams.fmpa + schwarzParams.impa)) * 10) / 10;
@@ -222,19 +245,14 @@ export function autoGenerateAllCephAnalyses(
     mcnamaraParams.nasolabialAngle = calculateVertexAngle(subnasaleSoft, columella, labSuperius);
   }
   if (porion && orbitale && nasion && pointA) {
-    // Frankfort Horizontal line equation: a*x + b*y + c = 0
     const fhEq = calculateLineEquation(porion, orbitale);
-    // Line perpendicular to FH passing through Nasion: -b*x + a*y + (b*nasion.x - a*nasion.y) = 0
     const naPerpEq: LineEquation = {
       a: -fhEq.b,
       b: fhEq.a,
       c: fhEq.b * nasion.x - fhEq.a * nasion.y,
     };
-    const distPx = calculatePerpendicularDistance(pointA, naPerpEq);
-    // Signed distance: Point A anterior to Na-Perp is positive
-    const isAnterior = (porion.x < orbitale.x) ? (pointA.x >= nasion.x) : (pointA.x <= nasion.x);
-    const sign = isAnterior ? 1 : -1;
-    mcnamaraParams.naPerpToPointA = Math.round((sign * (distPx / pxToMm)) * 10) / 10;
+    const distPx = calculateSignedPerpendicularDistance(pointA, naPerpEq, isFacingRight);
+    mcnamaraParams.naPerpToPointA = Math.round((distPx / pxToMm) * 10) / 10;
   }
   if (condylon && gnathion) {
     mcnamaraParams.mandibularLengthCoGn = Math.round((calculateDistance(condylon, gnathion) / pxToMm) * 10) / 10;
@@ -246,10 +264,10 @@ export function autoGenerateAllCephAnalyses(
     mcnamaraParams.maxMandDifference = Math.round((mcnamaraParams.mandibularLengthCoGn - mcnamaraParams.maxillaryLengthCoPointA) * 10) / 10;
   }
   if (porion && orbitale && mpStart && mpEnd) {
-    mcnamaraParams.mandibularPlaneAngle = calculateAngleBetweenLines(porion, orbitale, mpStart, mpEnd);
+    mcnamaraParams.mandibularPlaneAngle = calculateAcuteLineAngle(porion, orbitale, mpStart, mpEnd);
   }
   if (ptPoint && gnathion && basion && nasion) {
-    mcnamaraParams.facialAxis = calculateAngleBetweenLines(ptPoint, gnathion, basion, nasion);
+    mcnamaraParams.facialAxis = calculateAnatomicalAngle(ptPoint, gnathion, basion, nasion);
   }
   if (pogonion && nasion && porion && orbitale) {
     const fhEq = calculateLineEquation(porion, orbitale);
@@ -258,10 +276,8 @@ export function autoGenerateAllCephAnalyses(
       b: fhEq.a,
       c: fhEq.b * nasion.x - fhEq.a * nasion.y,
     };
-    const distPx = calculatePerpendicularDistance(pogonion, naPerpEq);
-    const isAnterior = (porion.x < orbitale.x) ? (pogonion.x >= nasion.x) : (pogonion.x <= nasion.x);
-    const sign = isAnterior ? 1 : -1;
-    mcnamaraParams.pogNaPerp = Math.round((sign * (distPx / pxToMm)) * 10) / 10;
+    const distPx = calculateSignedPerpendicularDistance(pogonion, naPerpEq, isFacingRight);
+    mcnamaraParams.pogNaPerp = Math.round((distPx / pxToMm) * 10) / 10;
   }
   if (u1Tip && pointA) {
     mcnamaraParams.upperIncisorToPointA = Math.round((Math.abs(u1Tip.x - pointA.x) / pxToMm) * 10) / 10;
@@ -275,33 +291,33 @@ export function autoGenerateAllCephAnalyses(
   // 5. RICKETTS ANALYSIS
   const rickettsParams: Record<string, number | ''> = {};
   if (ptPoint && gnathion && basion && nasion) {
-    rickettsParams.facialAxis = calculateAngleBetweenLines(ptPoint, gnathion, basion, nasion);
+    rickettsParams.facialAxis = calculateAnatomicalAngle(ptPoint, gnathion, basion, nasion);
   }
   if (porion && orbitale && nasion && pogonion) {
-    rickettsParams.facialDepth = calculateAngleBetweenLines(porion, orbitale, nasion, pogonion);
+    rickettsParams.facialDepth = calculateAcuteLineAngle(porion, orbitale, nasion, pogonion);
   }
   if (porion && orbitale && mpStart && mpEnd) {
-    rickettsParams.mandibularPlaneAngle = calculateAngleBetweenLines(porion, orbitale, mpStart, mpEnd);
+    rickettsParams.mandibularPlaneAngle = calculateAcuteLineAngle(porion, orbitale, mpStart, mpEnd);
   }
   if (nasion && pogonion && pointA) {
     const npogEq = calculateLineEquation(nasion, pogonion);
-    const distPx = calculatePerpendicularDistance(pointA, npogEq);
+    const distPx = calculateSignedPerpendicularDistance(pointA, npogEq, isFacingRight);
     rickettsParams.convexityPointA = Math.round((distPx / pxToMm) * 10) / 10;
   }
   if (l1Tip && pointA && pogonion) {
     const apogEq = calculateLineEquation(pointA, pogonion);
-    const distPx = calculatePerpendicularDistance(l1Tip, apogEq);
+    const distPx = calculateSignedPerpendicularDistance(l1Tip, apogEq, isFacingRight);
     rickettsParams.lowerIncisorToAPogMm = Math.round((distPx / pxToMm) * 10) / 10;
   }
   if (u6Mesial && ptPoint) {
     rickettsParams.upperMolarToPtv = Math.round((Math.abs(u6Mesial.x - ptPoint.x) / pxToMm) * 10) / 10;
   }
   if (l1Apex && l1Tip && pointA && pogonion) {
-    rickettsParams.lowerIncisorToAPogDeg = calculateAngleBetweenLines(l1Apex, l1Tip, pointA, pogonion);
+    rickettsParams.lowerIncisorToAPogDeg = calculateAnatomicalAngle(l1Apex, l1Tip, pointA, pogonion);
   }
   if (pronasale && softPog && labInferius) {
     const eLineEq = calculateLineEquation(pronasale, softPog);
-    const distPx = calculatePerpendicularDistance(labInferius, eLineEq);
+    const distPx = calculateSignedPerpendicularDistance(labInferius, eLineEq, isFacingRight);
     rickettsParams.lowerLipToEPlane = Math.round((distPx / pxToMm) * 10) / 10;
   }
 
@@ -316,7 +332,7 @@ export function autoGenerateAllCephAnalyses(
   }
   if (softPog && labSuperius && subnasaleSoft) {
     const hLineEq = calculateLineEquation(softPog, labSuperius);
-    const distPx = calculatePerpendicularDistance(subnasaleSoft, hLineEq);
+    const distPx = calculateSignedPerpendicularDistance(subnasaleSoft, hLineEq, isFacingRight);
     holdawayParams.subnasaleToHLine = Math.round((distPx / pxToMm) * 10) / 10;
   }
   if (softPog && labSuperius) {
@@ -324,16 +340,16 @@ export function autoGenerateAllCephAnalyses(
   }
   if (softPog && labSuperius && labInferius) {
     const hLineEq = calculateLineEquation(softPog, labSuperius);
-    const distPx = calculatePerpendicularDistance(labInferius, hLineEq);
+    const distPx = calculateSignedPerpendicularDistance(labInferius, hLineEq, isFacingRight);
     holdawayParams.lowerLipToHLine = Math.round((distPx / pxToMm) * 10) / 10;
   }
   if (porion && orbitale && softNasion && softPog) {
-    holdawayParams.softTissueFacialAngle = calculateAngleBetweenLines(porion, orbitale, softNasion, softPog);
+    holdawayParams.softTissueFacialAngle = calculateAcuteLineAngle(porion, orbitale, softNasion, softPog);
   }
   if (softPog && labSuperius && softNasion && pointB) {
-    holdawayParams.hAngle = calculateAngleBetweenLines(softPog, labSuperius, softNasion, pointB);
+    holdawayParams.hAngle = calculateAnatomicalAngle(softPog, labSuperius, softNasion, pointB);
   } else if (softPog && labSuperius && softNasion && pointA) {
-    holdawayParams.hAngle = calculateAngleBetweenLines(softPog, labSuperius, softNasion, pointA);
+    holdawayParams.hAngle = calculateAnatomicalAngle(softPog, labSuperius, softNasion, pointA);
   }
 
   // 7. COGS ANALYSIS & COGS SOFT TISSUE
@@ -355,6 +371,9 @@ export function autoGenerateAllCephAnalyses(
   }
   if (articulare && gonion) {
     cogsParams.ramusHeightArGo = Math.round((calculateDistance(articulare, gonion) / pxToMm) * 10) / 10;
+  }
+  if (nasion && menton) {
+    cogsParams.totalAnteriorFaceHeightNMe = Math.round((calculateDistance(nasion, menton) / pxToMm) * 10) / 10;
   }
   if (nasion && ans) {
     cogsParams.nAns = Math.round((calculateDistance(nasion, ans) / pxToMm) * 10) / 10;
@@ -393,12 +412,12 @@ export function autoGenerateAllCephAnalyses(
   }
   if (subnasaleSoft && softPog && labSuperius) {
     const profileLine = calculateLineEquation(subnasaleSoft, softPog);
-    const distPx = calculatePerpendicularDistance(labSuperius, profileLine);
+    const distPx = calculateSignedPerpendicularDistance(labSuperius, profileLine, isFacingRight);
     cogsSoftParams.lsSnPg = Math.round((distPx / pxToMm) * 10) / 10;
   }
   if (subnasaleSoft && softPog && labInferius) {
     const profileLine = calculateLineEquation(subnasaleSoft, softPog);
-    const distPx = calculatePerpendicularDistance(labInferius, profileLine);
+    const distPx = calculateSignedPerpendicularDistance(labInferius, profileLine, isFacingRight);
     cogsSoftParams.liSnPg = Math.round((distPx / pxToMm) * 10) / 10;
   }
   if (labInferius && softPog) {
@@ -410,7 +429,7 @@ export function autoGenerateAllCephAnalyses(
     cogsSoftParams.stmsStmi = 2.0;
   }
   if (porion && orbitale && softPog && labSuperius) {
-    cogsSoftParams.merrifieldZAngle = calculateAngleBetweenLines(porion, orbitale, softPog, labSuperius);
+    cogsSoftParams.merrifieldZAngle = calculateAcuteLineAngle(porion, orbitale, softPog, labSuperius);
   }
 
   // 8. CEPH DISCREPANCY & WITS ANALYSIS
@@ -419,20 +438,62 @@ export function autoGenerateAllCephAnalyses(
   if (typeof steinersParams.snb === 'number') cephDiscParams.snbAngle = steinersParams.snb;
   if (typeof steinersParams.anb === 'number') cephDiscParams.anbAngle = steinersParams.anb;
 
-  // Wits AO-BO calculation: Project A and B onto Occlusal Plane
+  // Wits AO-BO calculation: Orthogonal projection of Point A and Point B onto Occlusal Plane
   if (pointA && pointB && occStart && occEnd) {
     const occEq = calculateLineEquation(occStart, occEnd);
-    const distA = calculatePerpendicularDistance(pointA, occEq);
-    const distB = calculatePerpendicularDistance(pointB, occEq);
-    // AO-BO difference in mm
-    const witsVal = Math.round(((pointA.x - pointB.x) / pxToMm) * 10) / 10;
-    cephDiscParams.witsAoBo = witsVal;
+    const denom = occEq.a * occEq.a + occEq.b * occEq.b;
+    if (denom > 0) {
+      // Orthogonal projection of Point A onto Occlusal Plane: A' = A - kA * (a, b)
+      const kA = (occEq.a * pointA.x + occEq.b * pointA.y + occEq.c) / denom;
+      const projAx = pointA.x - kA * occEq.a;
+      const projAy = pointA.y - kA * occEq.b;
+
+      // Orthogonal projection of Point B onto Occlusal Plane: B' = B - kB * (a, b)
+      const kB = (occEq.a * pointB.x + occEq.b * pointB.y + occEq.c) / denom;
+      const projBx = pointB.x - kB * occEq.a;
+      const projBy = pointB.y - kB * occEq.b;
+
+      // Occlusal plane unit direction vector pointing anteriorly
+      const dx = occEnd.x - occStart.x;
+      const dy = occEnd.y - occStart.y;
+      const len = Math.sqrt(dx * dx + dy * dy);
+      if (len > 0) {
+        let ux = dx / len;
+        let uy = dy / len;
+        if (isFacingRight ? ux < 0 : ux > 0) {
+          ux = -ux;
+          uy = -uy;
+        }
+        // Displacement from B' to A' along anterior unit vector: Point A anterior to B is positive (+)
+        const dispPx = (projAx - projBx) * ux + (projAy - projBy) * uy;
+        const witsVal = Math.round((dispPx / pxToMm) * 10) / 10;
+        cephDiscParams.witsAoBo = witsVal;
+      }
+    }
   }
-  if (sella && nasion && pointA) {
-    cephDiscParams.aNPerp = Math.round((Math.abs(sella.x - pointA.x) / pxToMm) * 10) / 10;
+
+  // A-N-Perpendicular: Perpendicular line to Frankfort Horizontal passing through Nasion
+  if (porion && orbitale && nasion && pointA) {
+    const fhEq = calculateLineEquation(porion, orbitale);
+    const naPerpEq: LineEquation = {
+      a: -fhEq.b,
+      b: fhEq.a,
+      c: fhEq.b * nasion.x - fhEq.a * nasion.y,
+    };
+    const distPx = calculateSignedPerpendicularDistance(pointA, naPerpEq, isFacingRight);
+    cephDiscParams.aNPerp = Math.round((distPx / pxToMm) * 10) / 10;
   }
-  if (sella && nasion && pogonion) {
-    cephDiscParams.pogNPerp = Math.round((Math.abs(sella.x - pogonion.x) / pxToMm) * 10) / 10;
+
+  // Pog-N-Perpendicular: Perpendicular line to Frankfort Horizontal passing through Nasion
+  if (porion && orbitale && nasion && pogonion) {
+    const fhEq = calculateLineEquation(porion, orbitale);
+    const naPerpEq: LineEquation = {
+      a: -fhEq.b,
+      b: fhEq.a,
+      c: fhEq.b * nasion.x - fhEq.a * nasion.y,
+    };
+    const distPx = calculateSignedPerpendicularDistance(pogonion, naPerpEq, isFacingRight);
+    cephDiscParams.pogNPerp = Math.round((distPx / pxToMm) * 10) / 10;
   }
   if (condylon && gnathion && condylon && pointA) {
     const coGn = calculateDistance(condylon, gnathion) / pxToMm;

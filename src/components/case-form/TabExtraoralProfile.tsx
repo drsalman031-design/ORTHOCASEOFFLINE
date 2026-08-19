@@ -12,9 +12,11 @@ import {
   InvestigationImage,
   ExtraoralPhotos,
   ExtraoralPhotoAnalysis,
+  SmileAssessmentData,
 } from '../../types';
 import { Eye, UserCheck, Smile, Plus, Minus } from 'lucide-react';
 import { ExtraoralPhotoAnalyzer } from './ExtraoralPhotoAnalyzer';
+import { SmileAssessmentCard } from './SmileAssessmentCard';
 import { SelectField } from './SelectField';
 
 const CARD = 'bg-white border border-slate-200 rounded-xl p-4 shadow-xs space-y-4';
@@ -203,6 +205,8 @@ interface TabExtraoralProfileProps {
   setClinicalFma: (v: string) => void;
   vto: string;
   setVto: (v: string) => void;
+  smileAssessment?: SmileAssessmentData;
+  setSmileAssessment?: React.Dispatch<React.SetStateAction<SmileAssessmentData>>;
 }
 
 export const TabExtraoralProfile: React.FC<TabExtraoralProfileProps> = (props) => {
@@ -221,6 +225,14 @@ export const TabExtraoralProfile: React.FC<TabExtraoralProfileProps> = (props) =
         symmetry={props.symmetry}
         setSymmetry={props.setSymmetry}
       />
+
+      {/* SMILE ASSESSMENT & AESTHETIC ANALYSIS CARD */}
+      <SmileAssessmentCard
+        smileAssessment={props.smileAssessment}
+        setSmileAssessment={props.setSmileAssessment}
+        extraoralPhotos={props.extraoralPhotos}
+      />
+
       {/* 1. PHYSICAL STATUS & CRANIAL EXAMINATION */}
       <div className={CARD}>
         <h3 className={SECTION_TITLE}>

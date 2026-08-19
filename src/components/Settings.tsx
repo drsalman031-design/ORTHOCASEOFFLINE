@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   User,
   Save,
@@ -8,6 +8,7 @@ import {
   Database,
   Trash2,
   CheckCircle2,
+  AlertCircle,
   ShieldCheck,
   RefreshCw,
   Sparkles,
@@ -30,9 +31,15 @@ import {
   ChevronRight,
   X,
   RotateCcw,
+  KeyRound,
+  FileCheck,
 } from 'lucide-react';
 import { StudentProfile } from '../types';
-import { exportAllDataJSON, importDataJSON, exportEncryptedVault, importEncryptedVault } from '../lib/db';
+import {
+  backupDatabaseToLocalVault,
+  restoreDatabaseFromLocalVault,
+} from '../lib/db';
+import { saveBackupFileToDevice, readUploadedFile } from '../lib/fileBackupHelper';
 import { getCurrentUserAccount } from '../lib/authContext';
 
 interface SettingsProps {
@@ -84,18 +91,27 @@ export const Settings: React.FC<SettingsProps> = ({
     }
   }, [currentUser?.id, currentUser?.name, profile.studentName, profile.academicYear]);
 
-  // Toggles
-  const [autoBackupEnabled, setAutoBackupEnabled] = useState(true);
-  const [aiDiagnosisEnabled, setAiDiagnosisEnabled] = useState(true);
-  const [aiSuggestionsEnabled, setAiSuggestionsEnabled] = useState(true);
-
-  // Modals & Banners
+  // Modals & Banners & Toast Notification State
   const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
-  const [savedSuccess, setSavedSuccess] = useState(false);
-  const [importSuccessMessage, setImportSuccessMessage] = useState<string | null>(null);
-  const [syncStatusMsg, setSyncStatusMsg] = useState<string | null>(null);
+  const [toastNotification, setToastNotification] = useState<{
+    type: 'success' | 'error' | 'info';
+    title: string;
+    message: string;
+  } | null>(null);
+
+  // Backup & Restore processing states
+  const [isBackingUp, setIsBackingUp] = useState(false);
+  const [isRestoring, setIsRestoring] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const showToast = (type: 'success' | 'error' | 'info', title: string, message: string, durationMs = 3500) => {
+    setToastNotification({ type, title, message });
+    setTimeout(() => {
+      setToastNotification((current) => (current?.title === title ? null : current));
+    }, durationMs);
+  };
 
   const handleProfileSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -107,118 +123,131 @@ export const Settings: React.FC<SettingsProps> = ({
       academicYear,
       supervisorName,
     });
-    setSavedSuccess(true);
+    showToast('success', 'Profile Updated', 'Department profile updated successfully!');
     setIsEditProfileOpen(false);
-    setTimeout(() => setSavedSuccess(false), 2500);
   };
 
-  const handleSyncNow = () => {
-    setSyncStatusMsg('Syncing all patient records with Cloud Vault...');
-    setTimeout(() => {
-      setSyncStatusMsg('Cloud sync completed successfully at ' + new Date().toLocaleTimeString());
-      setTimeout(() => setSyncStatusMsg(null), 3000);
-    }, 1200);
-  };
+  /**
+   * 1. "Backup to Phone" Feature
+   * - Extracts all patient records & state
+   * - Encrypts with AES-GCM-256 using device key
+   * - Generates OrthoCase_Backup_YYYY-MM-DD.orthocase
+   * - Saves directly to phone storage (Downloads/Documents)
+   * - Shows success toast notification
+   */
+  const handleBackupToPhone = async () => {
+    if (isBackingUp) return;
+    setIsBackingUp(true);
 
-  const handleExportEncryptedVault = async () => {
-    const passphrase = prompt('Enter a secure passphrase to encrypt your .orthocase clinical backup vault:');
-    if (!passphrase || passphrase.trim().length === 0) return;
     try {
-      const vaultStr = await exportEncryptedVault(passphrase.trim());
-      const blob = new Blob([vaultStr], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `OrthoCase_Encrypted_Vault_${new Date().toISOString().split('T')[0]}.orthocase`;
-      a.click();
-      URL.revokeObjectURL(url);
-      setSavedSuccess(true);
-      setTimeout(() => setSavedSuccess(false), 2500);
-    } catch (err) {
-      alert('Error creating encrypted vault: ' + err);
+      const backupData = await backupDatabaseToLocalVault();
+      const savedSuccessfully = await saveBackupFileToDevice(backupData.payload, backupData.filename);
+
+      if (savedSuccessfully) {
+        showToast(
+          'success',
+          'Backup Saved to Phone Storage',
+          `Encrypted vault created: ${backupData.filename} (${backupData.count} patient records securely archived with AES-256).`,
+          4500
+        );
+      }
+    } catch (err: any) {
+      console.error('Backup error:', err);
+      showToast('error', 'Backup Failed', err.message || 'Unable to complete backup to local storage.');
+    } finally {
+      setIsBackingUp(false);
     }
   };
 
-  const handleImportEncryptedVaultFile = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const passphrase = prompt('Enter the decryption password for this .orthocase vault:');
-    if (!passphrase) return;
-
-    const reader = new FileReader();
-    reader.onload = async () => {
-      try {
-        const text = reader.result as string;
-        const result = await importEncryptedVault(text, passphrase.trim(), 'merge');
-        setImportSuccessMessage(`Successfully decrypted and restored ${result.count} patient case records (${result.merged} merged)!`);
-        setTimeout(() => {
-          setImportSuccessMessage(null);
-          window.location.reload();
-        }, 2000);
-      } catch (err: any) {
-        alert('Vault decryption failed: ' + (err.message || 'Incorrect password or corrupted file'));
-      }
-    };
-    reader.readAsText(file);
-  };
-
-  const handleExportData = async () => {
-    try {
-      const jsonStr = await exportAllDataJSON();
-      const blob = new Blob([jsonStr], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `OrthoCase_Backup_${new Date().toISOString().split('T')[0]}.json`;
-      a.click();
-      URL.revokeObjectURL(url);
-    } catch (err) {
-      alert('Error exporting backup file: ' + err);
+  /**
+   * 2. "Restore from Phone" Feature
+   * - Opens native OS file picker restricted to .orthocase files
+   * - Verifies cryptographic integrity & decrypts AES-GCM-256 payload
+   * - Safely merges/restores records into local database
+   * - Shows success toast & triggers UI reload
+   */
+  const handleRestoreClick = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+      fileInputRef.current.click();
     }
   };
 
-  const handleImportFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFilePickedForRestore = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const reader = new FileReader();
-    reader.onload = async () => {
+    setIsRestoring(true);
+    try {
+      const fileContent = await readUploadedFile(file);
+      
+      let result;
       try {
-        const text = reader.result as string;
-        const count = await importDataJSON(text);
-        setImportSuccessMessage(`Successfully restored ${count} patient case records!`);
-        setTimeout(() => {
-          setImportSuccessMessage(null);
-          window.location.reload();
-        }, 2000);
-      } catch (err) {
-        alert('Failed to restore backup file. Make sure it is a valid OrthoCase JSON backup.');
+        result = await restoreDatabaseFromLocalVault(fileContent);
+      } catch (decryptErr: any) {
+        // If automatic device key decryption failed, prompt user for custom passphrase
+        const fallbackPassphrase = prompt(
+          'This backup may have been created on another device or with a custom password. Enter the encryption password to unlock:'
+        );
+        if (!fallbackPassphrase) {
+          throw new Error('Decryption cancelled. Password required to unlock this backup.');
+        }
+        result = await restoreDatabaseFromLocalVault(fileContent, fallbackPassphrase.trim());
       }
-    };
-    reader.readAsText(file);
+
+      showToast(
+        'success',
+        'Database Restored Successfully!',
+        `Restored ${result.count} patient records (${result.merged} merged). Refreshing dashboard...`,
+        3000
+      );
+
+      // Trigger automatic UI refresh/reload so dashboard displays restored logs immediately
+      setTimeout(() => {
+        window.location.reload();
+      }, 1600);
+    } catch (err: any) {
+      console.error('Restore error:', err);
+      showToast(
+        'error',
+        'Restore Failed',
+        err.message || 'Failed to decrypt or read .orthocase backup file. Ensure file is valid and undamaged.'
+      );
+      setIsRestoring(false);
+    }
   };
 
   return (
     <div className="w-full max-w-4xl mx-auto space-y-3.5 pb-20 font-sans box-border min-w-0">
-      {savedSuccess && (
-        <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 p-2.5 rounded-xl flex items-center gap-2 font-bold text-xs shadow-xs">
-          <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-          <span>Department Profile updated successfully!</span>
-        </div>
-      )}
-
-      {importSuccessMessage && (
-        <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 p-2.5 rounded-xl flex items-center gap-2 font-bold text-xs shadow-xs">
-          <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-          <span>{importSuccessMessage}</span>
-        </div>
-      )}
-
-      {syncStatusMsg && (
-        <div className="bg-blue-50 border border-blue-200 text-[#00317e] p-2.5 rounded-xl flex items-center gap-2 font-bold text-xs shadow-xs">
-          <RefreshCw className="w-4 h-4 text-[#00317e] animate-spin shrink-0" />
-          <span>{syncStatusMsg}</span>
+      {/* FLOATING / TOP TOAST NOTIFICATION */}
+      {toastNotification && (
+        <div
+          className={`p-3 rounded-2xl flex items-start gap-2.5 shadow-md border animate-in fade-in slide-in-from-top-2 duration-200 ${
+            toastNotification.type === 'success'
+              ? 'bg-emerald-50 border-emerald-200 text-emerald-900'
+              : toastNotification.type === 'error'
+              ? 'bg-rose-50 border-rose-200 text-rose-900'
+              : 'bg-blue-50 border-blue-200 text-blue-900'
+          }`}
+        >
+          {toastNotification.type === 'success' ? (
+            <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
+          ) : toastNotification.type === 'error' ? (
+            <AlertCircle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
+          ) : (
+            <Info className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
+          )}
+          <div className="flex-1 min-w-0">
+            <h4 className="text-xs font-bold leading-tight">{toastNotification.title}</h4>
+            <p className="text-[11px] opacity-90 leading-normal mt-0.5">{toastNotification.message}</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setToastNotification(null)}
+            className="p-1 text-slate-400 hover:text-slate-700 cursor-pointer rounded-lg shrink-0"
+          >
+            <X className="w-4 h-4" />
+          </button>
         </div>
       )}
 
@@ -260,7 +289,7 @@ export const Settings: React.FC<SettingsProps> = ({
           </button>
         </div>
 
-        <div className="grid grid-cols-3 gap-2 w-full gap-2 pt-2 border-t border-slate-100 text-xs">
+        <div className="grid grid-cols-3 gap-2 w-full pt-2 border-t border-slate-100 text-xs">
           <div>
             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
               Batch Year
@@ -285,13 +314,19 @@ export const Settings: React.FC<SettingsProps> = ({
       {/* GROUPED NAVIGATION SECTIONS */}
       <div className="space-y-3">
 
-        {/* SECURE DATA VAULT & BACKUP */}
+        {/* TWO-BUTTON LOCAL BACKUP & RESTORE PANEL */}
         <div className="space-y-1">
-          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider ml-1">
-            Local Data Vault & Security (AES-256)
-          </p>
+          <div className="flex items-center justify-between ml-1 mr-1">
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+              Local Phone Backup & Restore (Offline AES-256)
+            </p>
+            <span className="text-[10px] font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-100">
+              100% Offline Vault
+            </span>
+          </div>
+
           <div className="bg-white border border-slate-200/80 rounded-2xl divide-y divide-slate-100 overflow-hidden shadow-2xs">
-            <div className="p-3.5 space-y-2.5">
+            <div className="p-3.5 space-y-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Database className="w-4 h-4 text-teal-600" />
@@ -302,48 +337,67 @@ export const Settings: React.FC<SettingsProps> = ({
                 </span>
               </div>
 
-              <div className="grid grid-cols-2 gap-2 pt-1">
+              {/* TWO CLEAN DISTINCT BUTTONS */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+                {/* 1. BACKUP TO PHONE BUTTON */}
                 <button
                   type="button"
-                  onClick={handleExportEncryptedVault}
-                  className="bg-[#071B49] hover:bg-[#00317e] text-white p-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 shadow-2xs cursor-pointer transition-all active:scale-[0.98]"
+                  onClick={handleBackupToPhone}
+                  disabled={isBackingUp}
+                  className="w-full bg-teal-600 hover:bg-teal-700 active:scale-[0.98] disabled:opacity-75 disabled:cursor-not-allowed text-white p-3 rounded-xl font-bold text-xs flex flex-col items-center justify-center gap-1 shadow-sm transition-all cursor-pointer border border-teal-700/30"
                 >
-                  <Lock className="w-3.5 h-3.5 text-teal-400" />
-                  <span>Export .orthocase</span>
+                  <div className="flex items-center gap-2">
+                    {isBackingUp ? (
+                      <RefreshCw className="w-4 h-4 animate-spin text-white" />
+                    ) : (
+                      <Download className="w-4 h-4 text-white" />
+                    )}
+                    <span className="text-sm font-bold">📥 Backup to Phone</span>
+                  </div>
+                  <span className="text-[10px] font-medium text-teal-100 tracking-tight">
+                    {isBackingUp ? 'Encrypting & Saving...' : 'Save encrypted .orthocase to phone storage'}
+                  </span>
                 </button>
 
-                <label className="bg-slate-800 hover:bg-slate-900 text-white p-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 shadow-2xs cursor-pointer transition-all active:scale-[0.98]">
-                  <HardDrive className="w-3.5 h-3.5 text-emerald-400" />
-                  <span>Restore .orthocase</span>
-                  <input
-                    type="file"
-                    accept=".orthocase,.json"
-                    onChange={handleImportEncryptedVaultFile}
-                    className="hidden"
-                  />
-                </label>
+                {/* 2. RESTORE FROM PHONE BUTTON */}
+                <button
+                  type="button"
+                  onClick={handleRestoreClick}
+                  disabled={isRestoring}
+                  className="w-full bg-slate-800 hover:bg-slate-900 active:scale-[0.98] disabled:opacity-75 disabled:cursor-not-allowed text-white p-3 rounded-xl font-bold text-xs flex flex-col items-center justify-center gap-1 shadow-sm transition-all cursor-pointer border border-slate-700"
+                >
+                  <div className="flex items-center gap-2">
+                    {isRestoring ? (
+                      <RefreshCw className="w-4 h-4 animate-spin text-emerald-400" />
+                    ) : (
+                      <Upload className="w-4 h-4 text-emerald-400" />
+                    )}
+                    <span className="text-sm font-bold">📤 Restore from Phone</span>
+                  </div>
+                  <span className="text-[10px] font-medium text-slate-300 tracking-tight">
+                    {isRestoring ? 'Decrypting & Restoring...' : 'Pick .orthocase file to restore database'}
+                  </span>
+                </button>
+
+                {/* Hidden Native File Picker restricted to .orthocase */}
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  accept=".orthocase"
+                  onChange={handleFilePickedForRestore}
+                  className="hidden"
+                />
               </div>
 
-              <div className="flex items-center justify-between pt-1 text-[11px] text-slate-500 border-t border-slate-100">
-                <span>Plain JSON Backup (Legacy):</span>
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={handleExportData}
-                    className="text-teal-700 hover:underline font-semibold cursor-pointer"
-                  >
-                    Export JSON
-                  </button>
-                  <span>•</span>
-                  <label className="text-teal-700 hover:underline font-semibold cursor-pointer">
-                    Import JSON
-                    <input
-                      type="file"
-                      accept=".json"
-                      onChange={handleImportFile}
-                      className="hidden"
-                    />
-                  </label>
+              {/* SECURITY / STATUS SUBTEXT */}
+              <div className="bg-slate-50 border border-slate-200/60 rounded-xl p-2.5 flex items-center justify-between text-[11px] text-slate-600">
+                <div className="flex items-center gap-1.5">
+                  <ShieldCheck className="w-3.5 h-3.5 text-teal-600 shrink-0" />
+                  <span>Payload is protected with <strong>AES-GCM-256</strong> client-side encryption.</span>
+                </div>
+                <div className="flex items-center gap-1 text-[10px] font-mono text-slate-500 shrink-0">
+                  <FileCheck className="w-3 h-3 text-emerald-600" />
+                  <span>.orthocase format</span>
                 </div>
               </div>
             </div>

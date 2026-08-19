@@ -224,11 +224,11 @@ function ToothWidthArchSection({
 
 export const TabModelAnalysis: React.FC<TabModelAnalysisProps> = (props) => {
   const bolton = calculateBolton(props.toothWidths);
-  const careyLower = calculateCarey(props.toothWidths, props.mandibularArchLengthAvailable || props.maxillaryArchLengthAvailable);
+  const careyLower = calculateCarey(props.toothWidths, props.mandibularArchLengthAvailable ?? '');
   const ponts = calculatePonts(props.toothWidths, props.measuredPremolarWidth, props.measuredMolarWidth);
 
-  // Total Tooth Material for Ashley Howe (Max 12 or sum from grid)
-  const ttm = bolton.max12 > 0 ? bolton.max12 : careyLower.totalToothMaterial;
+  // Total Tooth Material for Ashley Howe (Maxillary 12 or Maxillary 10 from grid)
+  const ttm = bolton.max12 > 0 ? bolton.max12 : (bolton.max6 > 0 ? bolton.max6 * 1.65 : 0);
   const ashleyHowe = calculateAshleyHowe(props.premolarBasalArchWidth || '', ttm);
 
   const getBadgeComponent = (badgeColor: 'green' | 'amber' | 'red' | 'blue') => {

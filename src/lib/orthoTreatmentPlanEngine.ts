@@ -1,4 +1,5 @@
 import { PatientRecord, ChiefComplaint, ModelAnalysisSection, DiagnosisAndPlan } from '../types';
+import { sumCareyMandibularToothMaterial, sumMaxillaryArchToothMaterial } from './calculations';
 
 export interface TreatmentPlanPointItem {
   id: string;
@@ -155,18 +156,44 @@ export function generateOrthoTreatmentPlan(patient: PatientRecord): FullOrthoTre
   ];
 
   // 5. EXTRACTION DECISION
+  // Compute true Arch Length Discrepancy (ALD = Available Arch Length - Required Tooth Material)
+  const tw = model.toothWidths || {};
+  const mandAvail = typeof model.mandibularArchLengthAvailable === 'number' ? model.mandibularArchLengthAvailable : null;
+  const maxAvail = typeof model.maxillaryArchLengthAvailable === 'number' ? model.maxillaryArchLengthAvailable : null;
+
+  const mandToothMat = sumCareyMandibularToothMaterial(tw);
+  const maxToothMat = sumMaxillaryArchToothMaterial(tw);
+
+  const mandDiscrepancy = mandAvail !== null && mandToothMat > 0 ? mandAvail - mandToothMat : null;
+  const maxDiscrepancy = maxAvail !== null && maxToothMat > 0 ? maxAvail - maxToothMat : null;
+  const trueAld = mandDiscrepancy ?? maxDiscrepancy;
+
   let extractionRec = 'Extraction Recommended';
   let teethExtract = 'All Four First Premolars (14, 24, 34, 44)';
-  let extractionRationale = 'Extraction indicated based on moderate-to-severe arch length discrepancy (>7 mm), bimaxillary dentoalveolar proclination (IMPA > 102°), and lip protrusion requiring maximum incisor retraction.';
+  let extractionRationale = 'Extraction indicated based on moderate-to-severe arch length discrepancy (>5 mm crowding), bimaxillary dentoalveolar proclination (IMPA > 102°), and lip protrusion requiring maximum incisor retraction.';
 
-  const ald = Number(model.maxillaryArchLengthAvailable) || 0;
-  if (ald > -3 && !cc.protrudingTeeth) {
-    extractionRec = 'Non-Extraction Treatment';
-    teethExtract = 'None';
-    extractionRationale = 'Non-extraction approach indicated due to minimal arch length discrepancy (<3 mm), satisfactory facial profile, and favorable incisor inclination allowing space creation via arch expansion and interproximal reduction (IPR).';
-  } else if (skClass.includes('Class II') && !skClass.includes('Class III')) {
-    teethExtract = 'Maxillary First Premolars (14, 24) and Mandibular Second Premolars (35, 45)';
-    extractionRationale = 'Extraction pattern designed for differential space management to facilitate Class I canine placement and maximum upper incisor retraction while maintaining lower molar position.';
+  if (trueAld !== null) {
+    if (trueAld > -3 && !cc.protrudingTeeth) {
+      extractionRec = 'Non-Extraction Treatment';
+      teethExtract = 'None';
+      extractionRationale = `Non-extraction approach indicated due to minimal arch length discrepancy (${trueAld >= 0 ? '+' : ''}${trueAld.toFixed(1)} mm, < 3 mm crowding), satisfactory facial profile, and favorable incisor inclination allowing space creation via arch expansion and interproximal reduction (IPR).`;
+    } else if (skClass.includes('Class II') && !skClass.includes('Class III')) {
+      teethExtract = 'Maxillary First Premolars (14, 24) and Mandibular Second Premolars (35, 45)';
+      extractionRationale = `Extraction pattern designed for differential space management (ALD ${trueAld.toFixed(1)} mm) to facilitate Class I canine placement and maximum upper incisor retraction while maintaining lower molar position.`;
+    } else {
+      teethExtract = 'All Four First Premolars (14, 24, 34, 44)';
+      extractionRationale = `Extraction indicated based on significant arch length discrepancy (${trueAld.toFixed(1)} mm crowding), dentoalveolar protrusion, and space requirement for full arch alignment and retraction.`;
+    }
+  } else {
+    // Fallback when model analysis is not completed
+    if (!cc.protrudingTeeth && !cc.irregularTeeth) {
+      extractionRec = 'Non-Extraction Treatment';
+      teethExtract = 'None';
+      extractionRationale = 'Non-extraction approach indicated based on mild clinical presentation without severe crowding or protrusion, allowing space creation via arch expansion and IPR.';
+    } else if (skClass.includes('Class II') && !skClass.includes('Class III')) {
+      teethExtract = 'Maxillary First Premolars (14, 24) and Mandibular Second Premolars (35, 45)';
+      extractionRationale = 'Extraction pattern designed for differential space management to facilitate Class I canine placement and maximum upper incisor retraction while maintaining lower molar position.';
+    }
   }
 
   const extractionDecisionPoints: TreatmentPlanPointItem[] = [

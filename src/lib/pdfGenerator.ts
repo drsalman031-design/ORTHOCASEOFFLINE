@@ -834,6 +834,11 @@ export function buildPatientPDFDoc(patient: PatientRecord, profile: StudentProfi
     }
   });
 
+  const smileData = patient.smileAssessment || patient.extraoralProfile?.smileAssessment;
+  if (smileData?.photoUrl && typeof smileData.photoUrl === 'string' && smileData.photoUrl.startsWith('data:image')) {
+    addMedia({ id: 'smile_assessment_photo', category: 'Extraoral Photo', title: 'Smile Assessment Photo', dataUrl: smileData.photoUrl });
+  }
+
   const intraoralPhotosObj = (patient.intraoralPhotos || patient.intraoralSection?.photos || {}) as any;
   const intraoralKeyMap: Record<string, string> = {
     front: 'Frontal View in Occlusion',
@@ -1097,6 +1102,162 @@ export function buildPatientPDFDoc(patient: PatientRecord, profile: StudentProfi
   });
 
   // =========================================================================
+  // SLIDE 4B: FACIAL THIRDS, MIDLINE & TRANSVERSE SYMMETRY ANALYSIS
+  // =========================================================================
+  const photoAnalysis = patient.extraoralPhotoAnalysis || {};
+  const photoGuides = photoAnalysis.guides || {
+    trichionY: 0.20,
+    glabellaY: 0.45,
+    subnasaleY: 0.70,
+    mentonY: 0.95,
+    midlineX: 0.50,
+    vLeftOuterX: 0.15,
+    vLeftInnerX: 0.38,
+    vRightInnerX: 0.62,
+    vRightOuterX: 0.85,
+  };
+
+  const totalSpan = Math.max(0.01, photoGuides.mentonY - photoGuides.trichionY);
+  const upperThird = Math.max(0, photoGuides.glabellaY - photoGuides.trichionY);
+  const middleThird = Math.max(0, photoGuides.subnasaleY - photoGuides.glabellaY);
+  const lowerThird = Math.max(0, photoGuides.mentonY - photoGuides.subnasaleY);
+
+  const upperPct = Math.round((upperThird / totalSpan) * 100);
+  const middlePct = Math.round((middleThird / totalSpan) * 100);
+  const lowerPct = Math.round((lowerThird / totalSpan) * 100);
+
+  const vTotalW = Math.max(0.01, (photoGuides.vRightOuterX ?? 0.85) - (photoGuides.vLeftOuterX ?? 0.15));
+  const intercanthalW = Math.max(0, (photoGuides.vRightInnerX ?? 0.62) - (photoGuides.vLeftInnerX ?? 0.38));
+  const intercanthalPct = Math.round((intercanthalW / vTotalW) * 100);
+
+  const leftHalf = Math.max(0.001, (photoGuides.midlineX ?? 0.5) - (photoGuides.vLeftOuterX ?? 0.15));
+  const rightHalf = Math.max(0.001, (photoGuides.vRightOuterX ?? 0.85) - (photoGuides.midlineX ?? 0.5));
+  const symmetryRatio = Math.round((Math.min(leftHalf, rightHalf) / Math.max(leftHalf, rightHalf)) * 100);
+
+  let thirdsInterp = photoAnalysis.thirdsInterpretation;
+  if (!thirdsInterp) {
+    if (lowerPct > 36) thirdsInterp = `Increased Lower Facial Third (${lowerPct}% vs Norm ~33%). Hyperdivergent facial pattern tendency.`;
+    else if (lowerPct < 29) thirdsInterp = `Decreased Lower Facial Third (${lowerPct}% vs Norm ~33%). Hypodivergent facial pattern tendency.`;
+    else thirdsInterp = `Balanced Facial Thirds (Upper ${upperPct}%, Middle ${middlePct}%, Lower ${lowerPct}%).`;
+  }
+
+  let midlineInterp = photoAnalysis.midlineDeviation;
+  if (!midlineInterp) {
+    const devPct = ((photoGuides.midlineX ?? 0.5) - 0.5) * 100;
+    if (Math.abs(devPct) < 0.8) midlineInterp = 'Centered / Coincident with facial midline';
+    else if (devPct > 0) midlineInterp = `Facial Midline Deviated Right by ${devPct.toFixed(1)}% (~${(devPct * 0.35).toFixed(1)} mm)`;
+    else midlineInterp = `Facial Midline Deviated Left by ${Math.abs(devPct).toFixed(1)}% (~${(Math.abs(devPct) * 0.35).toFixed(1)} mm)`;
+  }
+
+  let fifthsInterp = photoAnalysis.fifthsInterpretation;
+  if (!fifthsInterp) {
+    if (intercanthalPct > 24) fifthsInterp = `Increased Intercanthal/Alar Width (${intercanthalPct}%, Norm ~20%). Wide base tendency. Transverse symmetry: ${symmetryRatio}%.`;
+    else if (intercanthalPct < 16) fifthsInterp = `Narrow Intercanthal/Alar Width (${intercanthalPct}%, Norm ~20%). Hypotelorism tendency. Transverse symmetry: ${symmetryRatio}%.`;
+    else fifthsInterp = `Balanced Vertical Facial Fifths & Intercanthal Width (${intercanthalPct}%, Norm ~20%). Transverse symmetry: ${symmetryRatio}%.`;
+  }
+
+  const frontalRestUrl = extraoralPhotosObj.frontal_rest || extraoralPhotosObj.frontalRest || '';
+
+  startNewSlide('Facial Thirds, Midline & Transverse Symmetry Analysis', 'Frontal Facial Proportions, Vertical Thirds & Transverse Symmetry');
+
+  const thirdsPhotoW = 108;
+  const thirdsPhotoH = 125;
+  const thirdsLabelH = 9;
+  const thirdsCardX = margin;
+  const thirdsCardY = y;
+
+  // Render Frontal Rest Photo (Left)
+  if (frontalRestUrl && typeof frontalRestUrl === 'string' && frontalRestUrl.startsWith('data:image')) {
+    renderImageContainInDoc(frontalRestUrl, thirdsCardX, thirdsCardY, thirdsPhotoW, thirdsPhotoH, [248, 250, 252], [203, 213, 225]);
+  } else {
+    doc.setFillColor(248, 250, 252);
+    doc.setDrawColor(226, 232, 240);
+    doc.setLineWidth(0.3);
+    doc.roundedRect(thirdsCardX, thirdsCardY, thirdsPhotoW, thirdsPhotoH, 2, 2, 'FD');
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(11);
+    doc.setTextColor(148, 163, 184);
+    doc.text('[Frontal at Rest Photo Not Uploaded]', thirdsCardX + thirdsPhotoW / 2, thirdsCardY + thirdsPhotoH / 2 - 2, { align: 'center' });
+    doc.setFontSize(8.5);
+    doc.text('Frontal Landmark Proportions Record', thirdsCardX + thirdsPhotoW / 2, thirdsCardY + thirdsPhotoH / 2 + 3.5, { align: 'center' });
+  }
+
+  // Label below photo
+  doc.setFillColor(241, 245, 249);
+  doc.setDrawColor(203, 213, 225);
+  doc.setLineWidth(0.3);
+  doc.roundedRect(thirdsCardX, thirdsCardY + thirdsPhotoH + 0.8, thirdsPhotoW, thirdsLabelH, 1.5, 1.5, 'FD');
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(10.5);
+  doc.setTextColor(15, 23, 42);
+  doc.text('Frontal at Rest Landmark Calibration', thirdsCardX + 4, thirdsCardY + thirdsPhotoH + 6.0);
+
+  // Right Table Container (149 mm wide)
+  const thirdsTableX = margin + thirdsPhotoW + 8;
+  const thirdsTableW = contentWidth - thirdsPhotoW - 8;
+  const thirdsTableH = thirdsPhotoH + thirdsLabelH + 0.8;
+
+  // Outer Box for Table
+  doc.setFillColor(255, 255, 255);
+  doc.setDrawColor(226, 232, 240);
+  doc.setLineWidth(0.3);
+  doc.roundedRect(thirdsTableX, thirdsCardY, thirdsTableW, thirdsTableH, 2, 2, 'FD');
+
+  // Header Banner
+  const thirdsHeaderH = 10;
+  doc.setFillColor(248, 250, 252);
+  doc.roundedRect(thirdsTableX, thirdsCardY, thirdsTableW, thirdsHeaderH, 2, 2, 'FD');
+  doc.setDrawColor(226, 232, 240);
+  doc.line(thirdsTableX, thirdsCardY + thirdsHeaderH, thirdsTableX + thirdsTableW, thirdsCardY + thirdsHeaderH);
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(11.5);
+  doc.setTextColor(13, 148, 136); // teal-600
+  doc.text('Live Proportions & Diagnostic Auto-Inferences', thirdsTableX + 4.5, thirdsCardY + 6.8);
+
+  const thirdsRows = [
+    { label: 'Upper Facial Third (Tr - G)', value: `${upperPct}% (Norm: ~33.3%)` },
+    { label: 'Middle Facial Third (G - Sn)', value: `${middlePct}% (Norm: ~33.3%)` },
+    { label: 'Lower Facial Third (Sn - Me)', value: `${lowerPct}% (Norm: ~33.3%)` },
+    { label: 'Thirds Diagnostic Interpretation', value: thirdsInterp },
+    { label: 'Facial Midline Position', value: midlineInterp },
+    { label: 'Intercanthal / Alar Width', value: `${intercanthalPct}% of facial width (Norm: ~20%)` },
+    { label: 'Transverse Facial Symmetry', value: `${symmetryRatio}% Symmetry Ratio` },
+    { label: 'Vertical Fifths & Symmetry Inference', value: fifthsInterp },
+  ];
+
+  const thirdsRowCount = thirdsRows.length;
+  const thirdsAvailH = thirdsTableH - thirdsHeaderH - 2;
+  const thirdsSingleRowH = thirdsAvailH / thirdsRowCount;
+
+  thirdsRows.forEach((item, rIdx) => {
+    const rowY = thirdsCardY + thirdsHeaderH + 1 + rIdx * thirdsSingleRowH;
+
+    if (rIdx % 2 === 1) {
+      doc.setFillColor(248, 250, 252);
+      doc.rect(thirdsTableX + 0.5, rowY, thirdsTableW - 1, thirdsSingleRowH, 'F');
+    }
+
+    if (rIdx < thirdsRowCount - 1) {
+      doc.setDrawColor(241, 245, 249);
+      doc.setLineWidth(0.2);
+      doc.line(thirdsTableX + 2, rowY + thirdsSingleRowH, thirdsTableX + thirdsTableW - 2, rowY + thirdsSingleRowH);
+    }
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9.5);
+    doc.setTextColor(51, 65, 85);
+    const splitLbl = doc.splitTextToSize(item.label, thirdsTableW * 0.42);
+    doc.text(splitLbl[0] || item.label, thirdsTableX + 4, rowY + thirdsSingleRowH / 2 + 1.2);
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9.2);
+    doc.setTextColor(15, 23, 42);
+    const splitVal = doc.splitTextToSize(item.value, thirdsTableW * 0.54);
+    doc.text(splitVal, thirdsTableX + thirdsTableW * 0.44, rowY + (splitVal.length > 1 ? 3.8 : thirdsSingleRowH / 2 + 1.2));
+  });
+
+  // =========================================================================
   // SLIDE 5 (CONDITIONAL): SOFT TISSUE VTO MORPH ANALYSIS
   // =========================================================================
   const vtoPhotoUrl = extraoralPhotosObj.vto || (patient.extraoralPhotos as any)?.vto || '';
@@ -1161,6 +1322,142 @@ export function buildPatientPDFDoc(patient: PatientRecord, profile: StudentProfi
     const vtoDesc = vtoComp?.comparisonNotes || patient.extraoralProfile?.vto || 'Simulated soft tissue profile shows harmonious lip competence and improved chin projection.';
     printSlideTextBlock('VTO Morphological Analysis Notes', vtoDesc, 26);
   }
+
+  // =========================================================================
+  // SLIDE: SMILE ASSESSMENT & AESTHETIC ANALYSIS
+  // =========================================================================
+  const smile = patient.smileAssessment || patient.extraoralProfile?.smileAssessment || ({} as any);
+  const smilePhotoUrl =
+    smile.photoUrl ||
+    extraoralPhotosObj.frontal_smile ||
+    extraoralPhotosObj.frontalSmile ||
+    '';
+
+  startNewSlide('Smile Assessment & Aesthetic Analysis', 'Macro, Mini & Micro Aesthetic Smile Examination');
+
+  const smilePhotoW = 108;
+  const smilePhotoH = 125;
+  const smileLabelH = 9;
+  const photoCardX = margin;
+  const photoCardY = y;
+
+  // Render Smile Photo (Left)
+  if (smilePhotoUrl && typeof smilePhotoUrl === 'string' && smilePhotoUrl.startsWith('data:image')) {
+    renderImageContainInDoc(smilePhotoUrl, photoCardX, photoCardY, smilePhotoW, smilePhotoH, [248, 250, 252], [203, 213, 225]);
+  } else {
+    doc.setFillColor(248, 250, 252);
+    doc.setDrawColor(226, 232, 240);
+    doc.setLineWidth(0.3);
+    doc.roundedRect(photoCardX, photoCardY, smilePhotoW, smilePhotoH, 2, 2, 'FD');
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(11);
+    doc.setTextColor(148, 163, 184);
+    doc.text('[Frontal Smile Photo Not Uploaded]', photoCardX + smilePhotoW / 2, photoCardY + smilePhotoH / 2 - 2, { align: 'center' });
+    doc.setFontSize(8.5);
+    doc.text('Diagnostic Smile Aesthetic Record', photoCardX + smilePhotoW / 2, photoCardY + smilePhotoH / 2 + 3.5, { align: 'center' });
+  }
+
+  // Label below photo
+  doc.setFillColor(241, 245, 249);
+  doc.setDrawColor(203, 213, 225);
+  doc.setLineWidth(0.3);
+  doc.roundedRect(photoCardX, photoCardY + smilePhotoH + 0.8, smilePhotoW, smileLabelH, 1.5, 1.5, 'FD');
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(10.5);
+  doc.setTextColor(15, 23, 42);
+  doc.text('Frontal Aesthetic Smile View', photoCardX + 4, photoCardY + smilePhotoH + 6.0);
+
+  // Right Table Container (149 mm wide)
+  const tableX = margin + smilePhotoW + 8; // 16 + 108 + 8 = 132 mm
+  const tableW = contentWidth - smilePhotoW - 8; // 265 - 116 = 149 mm
+  const tableH = smilePhotoH + smileLabelH + 0.8; // 134.8 mm
+
+  // Outer Box for Table
+  doc.setFillColor(255, 255, 255);
+  doc.setDrawColor(226, 232, 240);
+  doc.setLineWidth(0.3);
+  doc.roundedRect(tableX, photoCardY, tableW, tableH, 2, 2, 'FD');
+
+  // Header Banner
+  const tableHeaderH = 10;
+  doc.setFillColor(248, 250, 252);
+  doc.roundedRect(tableX, photoCardY, tableW, tableHeaderH, 2, 2, 'FD');
+  doc.setDrawColor(226, 232, 240);
+  doc.line(tableX, photoCardY + tableHeaderH, tableX + tableW, photoCardY + tableHeaderH);
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(11.5);
+  doc.setTextColor(13, 148, 136); // teal-600
+  doc.text('Clinical Smile Parameters & Aesthetics Summary', tableX + 4.5, photoCardY + 6.8);
+
+  // Formulate Midline Text
+  let midlineText = smile.midlineType || 'Coinciding with Facial Midline';
+  if (smile.midlineType === 'Non-coinciding') {
+    const devMm = smile.midlineDeviationMm !== undefined && smile.midlineDeviationMm !== '' ? `${smile.midlineDeviationMm} mm` : 'Deviated';
+    const dir = smile.midlineDeviationDirection ? ` to ${smile.midlineDeviationDirection}` : '';
+    midlineText = `Non-coinciding (${devMm}${dir})`;
+  }
+
+  // Formulate Incisor Exposure
+  const restExposure = smile.incisorExposureRestMm !== undefined && smile.incisorExposureRestMm !== ''
+    ? `${smile.incisorExposureRestMm} mm (Norm: 2.0-3.5 mm)`
+    : '2.5 mm (Normal Display)';
+  const smileExposure = smile.incisorExposureSmile || 'Full crown display (100%)';
+
+  // Gingival Exposure
+  const gingivalExp = smile.gingivalExposureMm !== undefined && smile.gingivalExposureMm !== ''
+    ? `${smile.gingivalExposureMm} mm ${Number(smile.gingivalExposureMm) > 2 ? '(Excessive / Gummy)' : '(Ideal ≤ 2 mm)'}`
+    : '0 mm (Ideal ≤ 2 mm)';
+
+  const smileRows = [
+    { label: 'Skeletal vs Dental Midline', value: midlineText },
+    { label: 'Incisor Exposure at Rest', value: restExposure },
+    { label: 'Incisor Exposure on Smile', value: smileExposure },
+    { label: 'Gingival Exposure on Smile', value: gingivalExp },
+    { label: 'Buccal Corridor Space', value: smile.buccalCorridor || 'Normal (Harmonious negative space)' },
+    { label: 'Smile Arc Curvature', value: smile.smileArc || 'Consonant (Follows lower lip)' },
+    { label: 'Smile Assessment Notes', value: smile.notes || 'Consonant smile arc with symmetrical dental display and harmonious buccal corridors.' },
+  ];
+
+  const rowCount = smileRows.length;
+  const availRowsH = tableH - tableHeaderH - 2;
+  const singleRowH = availRowsH / rowCount;
+
+  smileRows.forEach((item, rIdx) => {
+    const rowY = photoCardY + tableHeaderH + 1 + rIdx * singleRowH;
+
+    // Zebra striping
+    if (rIdx % 2 === 1) {
+      doc.setFillColor(248, 250, 252);
+      doc.rect(tableX + 0.5, rowY, tableW - 1, singleRowH, 'F');
+    }
+
+    // Divider
+    if (rIdx < rowCount - 1) {
+      doc.setDrawColor(241, 245, 249);
+      doc.setLineWidth(0.2);
+      doc.line(tableX + 2, rowY + singleRowH, tableX + tableW - 2, rowY + singleRowH);
+    }
+
+    // Label
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9.5);
+    doc.setTextColor(51, 65, 85); // slate-700
+    const splitLabel = doc.splitTextToSize(item.label, tableW * 0.42);
+    doc.text(splitLabel, tableX + 4, rowY + singleRowH / 2 + 1);
+
+    // Value
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9.5);
+    doc.setTextColor(15, 23, 42); // slate-900
+    const splitVal = doc.splitTextToSize(item.value, tableW * 0.54);
+    const startValY = rowY + (singleRowH - (splitVal.length - 1) * 3.5) / 2 + 1;
+    splitVal.forEach((line: string, lIdx: number) => {
+      doc.text(line, tableX + tableW - 4, startValY + lIdx * 3.5, { align: 'right' });
+    });
+  });
+
+  y += tableH + 4;
 
   // =========================================================================
   // SLIDE 6: FUNCTIONAL & TMJ EXAMINATION
@@ -4109,7 +4406,7 @@ export function buildPatientPDFDoc(patient: PatientRecord, profile: StudentProfi
     );
 
     doc.text(
-      `Slide ${i} of ${totalPages} | Export Date: ${new Date().toLocaleDateString()} | Ortho Case Presentation System`,
+      `Slide ${i} of ${totalPages} | ${new Date().toLocaleDateString()} | Developed by Dr. Salman MDS Orthodontist in collaboration with Dr. Raghu Devanna & Dr. K. Srinivas Karnam`,
       margin + contentWidth,
       pageHeight - 7.0,
       { align: 'right' }

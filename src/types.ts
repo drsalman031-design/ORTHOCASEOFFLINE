@@ -109,6 +109,20 @@ export interface ExtraoralProfileSection {
   mentolabialSulcus?: MentolabialSulcus;
   clinicalFma?: string;
   vto?: string;
+  smileAssessment?: SmileAssessmentData;
+  notes?: string;
+}
+
+export interface SmileAssessmentData {
+  photoUrl?: string;
+  midlineType?: 'Coinciding' | 'Non-coinciding' | string;
+  midlineDeviationMm?: number | '';
+  midlineDeviationDirection?: 'Right' | 'Left' | string;
+  incisorExposureRestMm?: number | '';
+  incisorExposureSmile?: 'Full crown' | '3/4 crown' | '1/2 crown' | 'Gingival display' | 'Inadequate (< 75%)' | string;
+  gingivalExposureMm?: number | '';
+  buccalCorridor?: 'Normal' | 'Increased' | 'Restricted' | string;
+  smileArc?: 'Consonant' | 'Flat' | 'Reversed' | string;
   notes?: string;
 }
 
@@ -711,6 +725,8 @@ export interface UserAccount {
   institution: string;
   department: string;
   authProvider?: 'google' | 'institutional' | 'custom';
+  avatarUrl?: string;
+  googleSubId?: string;
   lastAuthenticatedAt?: string;
 }
 
@@ -930,6 +946,7 @@ export interface PatientRecord {
   extraoralProfile?: ExtraoralProfileSection;
   extraoralPhotos?: ExtraoralPhotos;
   extraoralPhotoAnalysis?: ExtraoralPhotoAnalysis;
+  smileAssessment?: SmileAssessmentData;
   functionalTmj?: FunctionalTmjSection;
   intraoralSection?: IntraoralExamSection;
   intraoralPhotos?: IntraoralPhotos;

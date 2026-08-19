@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 import { UserAccount } from '../types';
 import {
-  setCurrentUserAccount,
+  setSecureAuthSession,
   getCachedDeptCode,
   setCachedDeptCode,
   lookupDeptCode,
@@ -68,7 +68,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = React.memo(({ onLoginSucc
     setErrorMessage(null);
     setSubmitting(true);
 
-    // Save preferences
+    // Save email preference only (Never store passwords)
     try {
       localStorage.setItem('orthocase_remember_me', String(rememberMe));
       if (rememberMe && email.trim()) {
@@ -79,7 +79,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = React.memo(({ onLoginSucc
       setCachedDeptCode(deptCode);
     } catch {}
 
-    // Simulated async token generation & verification
+    // Simulated async token generation & local verification
     window.requestAnimationFrame(() => {
       setTimeout(() => {
         setSubmitting(false);
@@ -90,8 +90,8 @@ export const LoginScreen: React.FC<LoginScreenProps> = React.memo(({ onLoginSucc
           return;
         }
 
-        const dummyToken = `jwt-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
-        setCachedSessionToken(dummyToken, rememberMe);
+        const sessionToken = `jwt-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+        setCachedSessionToken(sessionToken, rememberMe);
 
         const newUser: UserAccount = {
           id: `usr-${Date.now()}`,
@@ -102,9 +102,12 @@ export const LoginScreen: React.FC<LoginScreenProps> = React.memo(({ onLoginSucc
           rollNumber: trimmedEmail.includes('@') ? 'ORTHO-PG' : trimmedEmail.toUpperCase(),
           institution: deptInfo.institution || 'Department of Orthodontics & Dentofacial Orthopedics',
           department: deptInfo.name || 'Orthodontics',
+          authProvider: 'institutional',
+          lastAuthenticatedAt: new Date().toISOString(),
         };
-        setCurrentUserAccount(newUser.id, newUser);
-        onLoginSuccess(newUser);
+
+        const persistedUser = setSecureAuthSession(newUser, sessionToken, 'institutional');
+        onLoginSuccess(persistedUser);
       }, 250);
     });
   }, [email, rememberMe, deptCode, deptInfo, onLoginSuccess]);
@@ -115,8 +118,8 @@ export const LoginScreen: React.FC<LoginScreenProps> = React.memo(({ onLoginSucc
       setGoogleLoading(false);
       setGoogleModalOpen(false);
 
-      const dummyToken = `google-jwt-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
-      setCachedSessionToken(dummyToken, true);
+      const sessionToken = `google-jwt-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+      setCachedSessionToken(sessionToken, true);
 
       const newUser: UserAccount = {
         id: `usr-google-${Date.now()}`,
@@ -127,9 +130,12 @@ export const LoginScreen: React.FC<LoginScreenProps> = React.memo(({ onLoginSucc
         rollNumber: 'ORTHO-GOOGLE-PG',
         institution: 'Department of Orthodontics & Dentofacial Orthopedics',
         department: 'Postgraduate Orthodontics',
+        authProvider: 'google',
+        lastAuthenticatedAt: new Date().toISOString(),
       };
-      setCurrentUserAccount(newUser.id, newUser);
-      onLoginSuccess(newUser);
+
+      const persistedUser = setSecureAuthSession(newUser, sessionToken, 'google');
+      onLoginSuccess(persistedUser);
     }, 300);
   }, [onLoginSuccess]);
 

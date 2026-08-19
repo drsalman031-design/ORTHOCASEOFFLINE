@@ -12,8 +12,7 @@ import {
   getDB,
 } from './lib/db';
 import { prefetchCaseForm, prefetchBonwillHawley, prefetchOnIdle, prefetchPatientList, prefetchReportViewer } from './lib/prefetch';
-import { getCurrentUserAccount, getActiveUserAccount, clearAuthSession, recordUserActivity, isSessionExpired } from './lib/authContext';
-import { LockScreenModal } from './components/LockScreenModal';
+import { getCurrentUserAccount, getActiveUserAccount, clearAuthSession, hasValidAuthSession } from './lib/authContext';
 import { LoginScreen } from './components/LoginScreen';
 
 // Role Dashboard Route Helpers
@@ -174,7 +173,7 @@ function TabLoader() {
 
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
-    return Boolean(localStorage.getItem('orthocase_current_user_id'));
+    return hasValidAuthSession();
   });
 
   const [currentUser, setCurrentUser] = useState<UserAccount | null>(() => {
@@ -183,11 +182,11 @@ export default function App() {
 
   const [dashboardKey, setDashboardKey] = useState<number>(0);
 
-  // Initialize activeTab strictly according to session rules:
+  // Initialize activeTab according to session rules:
   // - If session is already active (browser refresh), preserve current page/tab
-  // - If it's a NEW login session or auto-login with Remember Me, ALWAYS start at Dashboard ('home')
+  // - If fresh launch with valid local auth, open Dashboard ('home')
   const [activeTab, setActiveTabState] = useState<ActiveTab>(() => {
-    const isAuth = Boolean(localStorage.getItem('orthocase_current_user_id'));
+    const isAuth = hasValidAuthSession();
     if (!isAuth) return 'home';
 
     const isSessionActive = sessionStorage.getItem('orthocase_session_active');
@@ -202,52 +201,10 @@ export default function App() {
     }
   });
 
-  
-  const [isSessionLocked, setIsSessionLocked] = useState<boolean>(false);
-
-  // Request Persistent Storage on App launch
+  // Request Persistent Storage on App launch (Prevents Android WebView from purging offline DB)
   useEffect(() => {
     ensureStoragePersistence();
   }, []);
-
-  // 15-Minute Inactivity Auto-Lock & App Backgrounding Protection
-  useEffect(() => {
-    if (!isAuthenticated) return;
-    recordUserActivity();
-
-    const handleUserActivity = () => {
-      if (!isSessionLocked) {
-        recordUserActivity();
-      }
-    };
-
-    const handleVisibilityChange = () => {
-      if (!document.hidden && isSessionExpired(15 * 60 * 1000)) {
-        setIsSessionLocked(true);
-      }
-    };
-
-    window.addEventListener('mousedown', handleUserActivity, { passive: true });
-    window.addEventListener('keydown', handleUserActivity, { passive: true });
-    window.addEventListener('touchstart', handleUserActivity, { passive: true });
-    window.addEventListener('scroll', handleUserActivity, { passive: true });
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-
-    const interval = setInterval(() => {
-      if (isSessionExpired(15 * 60 * 1000) && !isSessionLocked) {
-        setIsSessionLocked(true);
-      }
-    }, 30000);
-
-    return () => {
-      window.removeEventListener('mousedown', handleUserActivity);
-      window.removeEventListener('keydown', handleUserActivity);
-      window.removeEventListener('touchstart', handleUserActivity);
-      window.removeEventListener('scroll', handleUserActivity);
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      clearInterval(interval);
-    };
-  }, [isAuthenticated, isSessionLocked]);
 
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
 
@@ -334,7 +291,7 @@ export default function App() {
   // Handle browser Back / Forward history popstate
   useEffect(() => {
     const handlePopState = () => {
-      if (!localStorage.getItem('orthocase_current_user_id')) {
+      if (!hasValidAuthSession()) {
         setIsAuthenticated(false);
         return;
       }
@@ -623,20 +580,6 @@ export default function App() {
               onDelete={handleDeletePatient}
             />
           </Suspense>
-        )}
-
-        {isSessionLocked && (
-          <LockScreenModal
-            user={activeUser}
-            onUnlock={() => {
-              setIsSessionLocked(false);
-              recordUserActivity();
-            }}
-            onLogout={() => {
-              setIsSessionLocked(false);
-              handleLogout();
-            }}
-          />
         )}
 
         {showNotificationModal && (

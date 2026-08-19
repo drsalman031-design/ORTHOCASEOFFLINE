@@ -710,6 +710,8 @@ export interface UserAccount {
   assignedStudentIds?: string[];
   institution: string;
   department: string;
+  authProvider?: 'google' | 'institutional' | 'custom';
+  lastAuthenticatedAt?: string;
 }
 
 export type FeedbackChip = 'Needs Revision' | 'Approved' | 'Clarify Detail' | 'General Comment';

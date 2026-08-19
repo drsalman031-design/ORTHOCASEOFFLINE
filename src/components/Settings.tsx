@@ -59,17 +59,17 @@ export const Settings: React.FC<SettingsProps> = ({
   onNavigate,
 }) => {
   const currentUser = getCurrentUserAccount();
-  const isHOD = currentUser.role === 'HOD';
-  const isFaculty = currentUser.role === 'STAFF_GUIDE';
+  const isHOD = currentUser?.role === 'HOD';
+  const isFaculty = currentUser?.role === 'STAFF_GUIDE';
   const canManageStudentsAndCases = isHOD || isFaculty;
 
   // Profile Form state - Prioritize logged in user account info for HOD, Staff, and Residents
-  const [studentName, setStudentName] = useState(currentUser.name || profile.studentName || '');
-  const [rollNumber, setRollNumber] = useState(currentUser.rollNumber || profile.rollNumber || (isHOD ? 'HOD-ORTHO-01' : isFaculty ? 'STAFF-ORTHO-01' : 'ORTHO-2024-PG-01'));
-  const [institution, setInstitution] = useState(currentUser.institution || profile.institution || 'Department of Orthodontics');
-  const [department, setDepartment] = useState(currentUser.department || profile.department || 'Orthodontics & Dentofacial Orthopedics');
+  const [studentName, setStudentName] = useState(currentUser?.name || profile.studentName || '');
+  const [rollNumber, setRollNumber] = useState(currentUser?.rollNumber || profile.rollNumber || (isHOD ? 'HOD-ORTHO-01' : isFaculty ? 'STAFF-ORTHO-01' : 'ORTHO-2024-PG-01'));
+  const [institution, setInstitution] = useState(currentUser?.institution || profile.institution || 'Department of Orthodontics');
+  const [department, setDepartment] = useState(currentUser?.department || profile.department || 'Orthodontics & Dentofacial Orthopedics');
   const [academicYear, setAcademicYear] = useState(profile.academicYear && !profile.academicYear.toLowerCase().includes('resident') ? profile.academicYear : 'Batch 2024');
-  const [supervisorName, setSupervisorName] = useState(currentUser.assignedStaffName || profile.supervisorName || 'Prof. Dr. Richardson');
+  const [supervisorName, setSupervisorName] = useState(currentUser?.assignedStaffName || profile.supervisorName || 'Prof. Dr. Richardson');
 
   // Keep local state in sync whenever currentUser or profile changes
   useEffect(() => {
@@ -82,7 +82,7 @@ export const Settings: React.FC<SettingsProps> = ({
       setAcademicYear(profile.academicYear && !profile.academicYear.toLowerCase().includes('resident') ? profile.academicYear : 'Batch 2024');
       setSupervisorName(user.assignedStaffName || profile.supervisorName || 'Prof. Dr. Richardson');
     }
-  }, [currentUser.id, currentUser.name, profile.studentName, profile.academicYear]);
+  }, [currentUser?.id, currentUser?.name, profile.studentName, profile.academicYear]);
 
   // Toggles
   const [autoBackupEnabled, setAutoBackupEnabled] = useState(true);
@@ -228,7 +228,7 @@ export const Settings: React.FC<SettingsProps> = ({
           <div className="flex items-center gap-3">
             <div className="relative shrink-0">
               <div className="w-12 h-12 rounded-xl bg-teal-50 border border-teal-200 text-teal-800 font-extrabold text-xl flex items-center justify-center overflow-hidden">
-                {currentUser.name ? currentUser.name[0] : 'D'}
+                {currentUser?.name ? currentUser.name[0] : studentName ? studentName[0] : 'D'}
               </div>
               <span className="absolute -bottom-1 -right-1 w-4 h-4 bg-teal-600 border-2 border-white rounded-full flex items-center justify-center text-[9px] text-white font-bold">
                 ✓
@@ -236,9 +236,16 @@ export const Settings: React.FC<SettingsProps> = ({
             </div>
 
             <div className="space-y-0.5">
-              <h2 className="text-base font-bold text-slate-900">{currentUser.name || studentName}</h2>
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <h2 className="text-base font-bold text-slate-900">{currentUser?.name || studentName}</h2>
+                {currentUser?.authProvider === 'google' && (
+                  <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-blue-700 bg-blue-50 border border-blue-200 px-1.5 py-0.2 rounded-md">
+                    Google
+                  </span>
+                )}
+              </div>
               <p className="text-[11px] font-semibold text-teal-700">
-                {currentUser.designation || 'MDS, Orthodontics'} • {currentUser.role === 'HOD' ? 'HOD' : currentUser.role === 'STAFF_GUIDE' ? 'Faculty Guide' : 'PG Resident'}
+                {currentUser?.designation || 'MDS, Orthodontics'} • {currentUser?.role === 'HOD' ? 'HOD' : currentUser?.role === 'STAFF_GUIDE' ? 'Faculty Guide' : 'PG Resident'}
               </p>
             </div>
           </div>

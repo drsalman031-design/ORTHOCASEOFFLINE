@@ -1,8 +1,8 @@
-﻿import type { CapacitorConfig } from '@capacitor/cli';
+import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
   appId: 'com.orthocase.offline',
-  appName: 'OrthoCase',
+  appName: 'Orthocase',
   webDir: 'dist',
   server: {
     androidScheme: 'https',

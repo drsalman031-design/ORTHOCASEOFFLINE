@@ -24,9 +24,26 @@ import {
   hashUserPin,
   verifyUserPin,
   isSessionExpired,
+  hasValidAuthSession,
+  setSecureAuthSession,
+  clearAuthSession,
+  getCurrentUserAccount,
+  setCachedSessionToken,
+  getCachedSessionToken,
 } from '../authContext';
 import { normalizeOrthoSpeechText, polishOrthoDictationOffline } from '../orthoVoiceEngine';
 import { PatientRecord, UserAccount } from '../../types';
+
+// In-memory Storage Polyfill for Node test runner
+const memoryStorage = new Map<string, string>();
+const mockStorage = {
+  getItem: (key: string) => memoryStorage.get(key) || null,
+  setItem: (key: string, val: string) => memoryStorage.set(key, String(val)),
+  removeItem: (key: string) => memoryStorage.delete(key),
+  clear: () => memoryStorage.clear(),
+};
+(globalThis as any).localStorage = mockStorage;
+(globalThis as any).sessionStorage = mockStorage;
 
 let passed = 0;
 let failed = 0;
@@ -270,6 +287,43 @@ async function runTests() {
   const invalidMimes = ['application/pdf', 'text/plain', 'application/x-msdownload'];
   assert(validMimes.every(m => m.startsWith('image/')), 'Valid clinical image MIME types accepted');
   assert(invalidMimes.every(m => !m.startsWith('image/')), 'Non-image executable/document formats rejected');
+
+  // TEST SUITE 8: OFFLINE AUTH SESSION PERSISTENCE & EXPLICIT LOGOUT
+  console.log('\n--- TEST 8: Offline Auth Session Persistence & Explicit Logout ---');
+  clearAuthSession();
+  assert(hasValidAuthSession() === false, 'hasValidAuthSession() returns false when no session exists');
+  assert(getCurrentUserAccount() === null, 'getCurrentUserAccount() returns null initially');
+
+  const testGoogleUser: UserAccount = {
+    id: 'usr-google-test-99',
+    name: 'Dr. Google Clinician',
+    role: 'STUDENT',
+    email: 'clinician@gmail.com',
+    designation: 'PG Resident / Orthodontist',
+    institution: 'Department of Orthodontics & Dentofacial Orthopedics',
+    department: 'Postgraduate Orthodontics',
+  };
+
+  const persistedSession = setSecureAuthSession(testGoogleUser, 'mock-jwt-token-xyz123', 'google');
+  assert(hasValidAuthSession() === true, 'hasValidAuthSession() returns true after Google session setup');
+  assert(persistedSession.authProvider === 'google', 'persisted session records authProvider as google');
+  assert(Boolean(persistedSession.lastAuthenticatedAt), 'persisted session records timestamp');
+
+  const retrievedUser = getCurrentUserAccount();
+  assert(retrievedUser !== null && retrievedUser.id === 'usr-google-test-99', 'getCurrentUserAccount() returns persisted user');
+  assert(retrievedUser?.authProvider === 'google', 'retrieved user maintains google provider');
+
+  // Encrypted token caching test
+  setCachedSessionToken('secret-test-token-777');
+  const retrievedToken = getCachedSessionToken();
+  assert(retrievedToken === 'secret-test-token-777', 'Masked session token recovers plain token cleanly');
+  assert(localStorage.getItem('orthocase_session_jwt') !== 'secret-test-token-777', 'Stored token is not in plain text');
+
+  // Explicit logout test
+  clearAuthSession();
+  assert(hasValidAuthSession() === false, 'hasValidAuthSession() returns false after explicit logout');
+  assert(getCurrentUserAccount() === null, 'getCurrentUserAccount() is null after explicit logout');
+  assert(getCachedSessionToken() === null, 'Cached session token is purged on logout');
 
   console.log('\n======================================================');
   console.log(`  RESULTS: ${passed} PASSED, ${failed} FAILED`);

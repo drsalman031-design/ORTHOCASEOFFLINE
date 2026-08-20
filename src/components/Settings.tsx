@@ -77,6 +77,7 @@ export const Settings: React.FC<SettingsProps> = ({
   const [department, setDepartment] = useState(currentUser?.department || profile.department || 'Orthodontics & Dentofacial Orthopedics');
   const [academicYear, setAcademicYear] = useState(profile.academicYear && !profile.academicYear.toLowerCase().includes('resident') ? profile.academicYear : 'Batch 2024');
   const [supervisorName, setSupervisorName] = useState(currentUser?.assignedStaffName || profile.supervisorName || 'Prof. Dr. Richardson');
+  const [institutionLogoUrl, setInstitutionLogoUrl] = useState(currentUser?.institutionLogoUrl || profile.institutionLogoUrl || '');
 
   // Keep local state in sync whenever currentUser or profile changes
   useEffect(() => {
@@ -88,8 +89,9 @@ export const Settings: React.FC<SettingsProps> = ({
       setDepartment(user.department || profile.department || 'Orthodontics & Dentofacial Orthopedics');
       setAcademicYear(profile.academicYear && !profile.academicYear.toLowerCase().includes('resident') ? profile.academicYear : 'Batch 2024');
       setSupervisorName(user.assignedStaffName || profile.supervisorName || 'Prof. Dr. Richardson');
+      setInstitutionLogoUrl(user.institutionLogoUrl || profile.institutionLogoUrl || '');
     }
-  }, [currentUser?.id, currentUser?.name, profile.studentName, profile.academicYear]);
+  }, [currentUser?.id, currentUser?.name, profile.studentName, profile.academicYear, profile.institutionLogoUrl]);
 
   // Modals & Banners & Toast Notification State
   const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
@@ -105,12 +107,30 @@ export const Settings: React.FC<SettingsProps> = ({
   const [isBackingUp, setIsBackingUp] = useState(false);
   const [isRestoring, setIsRestoring] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const logoInputRef = useRef<HTMLInputElement>(null);
 
   const showToast = (type: 'success' | 'error' | 'info', title: string, message: string, durationMs = 3500) => {
     setToastNotification({ type, title, message });
     setTimeout(() => {
       setToastNotification((current) => (current?.title === title ? null : current));
     }, durationMs);
+  };
+
+  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      showToast('error', 'Invalid File', 'Please select a valid image file (PNG, JPG, SVG).');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === 'string') {
+        setInstitutionLogoUrl(reader.result);
+        showToast('success', 'Logo Loaded', 'Institution logo loaded. Save profile to apply.');
+      }
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleProfileSubmit = (e: React.FormEvent) => {
@@ -122,8 +142,9 @@ export const Settings: React.FC<SettingsProps> = ({
       department,
       academicYear,
       supervisorName,
+      institutionLogoUrl,
     });
-    showToast('success', 'Profile Updated', 'Department profile updated successfully!');
+    showToast('success', 'Profile Updated', 'Department profile & institution crest updated!');
     setIsEditProfileOpen(false);
   };
 
@@ -547,6 +568,48 @@ export const Settings: React.FC<SettingsProps> = ({
                   onChange={(e) => setDepartment(e.target.value)}
                   className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-teal-500/20 outline-none"
                 />
+              </div>
+
+              <div>
+                <label className="block text-slate-700 font-bold mb-1">University / Hospital Crest / Logo</label>
+                <div className="flex items-center gap-3">
+                  {institutionLogoUrl ? (
+                    <div className="w-14 h-14 rounded-xl border border-slate-200 bg-white p-1 flex items-center justify-center shrink-0">
+                      <img src={institutionLogoUrl} alt="Crest" className="max-w-full max-h-full object-contain" />
+                    </div>
+                  ) : (
+                    <div className="w-14 h-14 rounded-xl border border-dashed border-slate-300 bg-slate-50 flex items-center justify-center text-slate-400 text-[10px] text-center p-1 shrink-0">
+                      No Logo
+                    </div>
+                  )}
+
+                  <div className="space-y-1.5">
+                    <input
+                      type="file"
+                      ref={logoInputRef}
+                      onChange={handleLogoUpload}
+                      accept="image/*"
+                      className="hidden"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => logoInputRef.current?.click()}
+                      className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs rounded-lg border border-slate-200 cursor-pointer"
+                    >
+                      {institutionLogoUrl ? 'Change Logo' : 'Upload Crest / Logo'}
+                    </button>
+                    {institutionLogoUrl && (
+                      <button
+                        type="button"
+                        onClick={() => setInstitutionLogoUrl('')}
+                        className="block text-[11px] text-rose-600 font-bold hover:underline cursor-pointer"
+                      >
+                        Remove Logo
+                      </button>
+                    )}
+                  </div>
+                </div>
+                <p className="text-[11px] text-slate-500 mt-1">Appears on PDF header banner, Slide 1, and Institutional Seal.</p>
               </div>
 
               <div className="pt-3 border-t border-slate-100 flex gap-2 justify-end">

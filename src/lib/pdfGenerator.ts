@@ -18,8 +18,10 @@ import {
 import {
   calculateBolton,
   calculateCarey,
+  calculateNanceMaxillary,
   calculatePonts,
   calculateAshleyHowe,
+  calculateTanakaJohnston,
 } from './calculations';
 import {
   calculateHawleyGeometry,
@@ -92,7 +94,17 @@ export function buildPatientPDFDoc(patient: PatientRecord, profile: StudentProfi
     doc.roundedRect(margin, y, 4.5, barH, 2, 2, 'F');
 
     const titleStr = title.toUpperCase();
-    const maxTitleW = contentWidth - 18;
+    const logoUrl = profile.institutionLogoUrl;
+    const hasLogo = !!(logoUrl && typeof logoUrl === 'string' && logoUrl.startsWith('data:image'));
+    const maxTitleW = contentWidth - (hasLogo ? 30 : 18);
+
+    if (hasLogo) {
+      const logoW = 13.5;
+      const logoH = 13.5;
+      const logoX = margin + contentWidth - logoW - 2.5;
+      const logoY = y + 1.75;
+      renderImageContainInDoc(logoUrl, logoX, logoY, logoW, logoH, [15, 23, 42], [51, 65, 85]);
+    }
 
     if (subtitle) {
       // 2-Tier Stacked Header: Title on top line, Subtitle cleanly below main title
@@ -1391,32 +1403,34 @@ export function buildPatientPDFDoc(patient: PatientRecord, profile: StudentProfi
   doc.text('Clinical Smile Parameters & Aesthetics Summary', tableX + 4.5, photoCardY + 6.8);
 
   // Formulate Midline Text
-  let midlineText = smile.midlineType || 'Coinciding with Facial Midline';
+  let midlineText = smile.midlineType || '—';
   if (smile.midlineType === 'Non-coinciding') {
     const devMm = smile.midlineDeviationMm !== undefined && smile.midlineDeviationMm !== '' ? `${smile.midlineDeviationMm} mm` : 'Deviated';
     const dir = smile.midlineDeviationDirection ? ` to ${smile.midlineDeviationDirection}` : '';
     midlineText = `Non-coinciding (${devMm}${dir})`;
+  } else if (smile.midlineType === 'Coinciding') {
+    midlineText = 'Coinciding with Facial Midline';
   }
 
   // Formulate Incisor Exposure
   const restExposure = smile.incisorExposureRestMm !== undefined && smile.incisorExposureRestMm !== ''
     ? `${smile.incisorExposureRestMm} mm (Norm: 2.0-3.5 mm)`
-    : '2.5 mm (Normal Display)';
-  const smileExposure = smile.incisorExposureSmile || 'Full crown display (100%)';
+    : '—';
+  const smileExposure = smile.incisorExposureSmile || '—';
 
   // Gingival Exposure
   const gingivalExp = smile.gingivalExposureMm !== undefined && smile.gingivalExposureMm !== ''
     ? `${smile.gingivalExposureMm} mm ${Number(smile.gingivalExposureMm) > 2 ? '(Excessive / Gummy)' : '(Ideal ≤ 2 mm)'}`
-    : '0 mm (Ideal ≤ 2 mm)';
+    : '—';
 
   const smileRows = [
     { label: 'Skeletal vs Dental Midline', value: midlineText },
     { label: 'Incisor Exposure at Rest', value: restExposure },
     { label: 'Incisor Exposure on Smile', value: smileExposure },
     { label: 'Gingival Exposure on Smile', value: gingivalExp },
-    { label: 'Buccal Corridor Space', value: smile.buccalCorridor || 'Normal (Harmonious negative space)' },
-    { label: 'Smile Arc Curvature', value: smile.smileArc || 'Consonant (Follows lower lip)' },
-    { label: 'Smile Assessment Notes', value: smile.notes || 'Consonant smile arc with symmetrical dental display and harmonious buccal corridors.' },
+    { label: 'Buccal Corridor Space', value: smile.buccalCorridor || '—' },
+    { label: 'Smile Arc Curvature', value: smile.smileArc || '—' },
+    { label: 'Smile Assessment Notes', value: smile.notes || '—' },
   ];
 
   const rowCount = smileRows.length;
@@ -1951,10 +1965,11 @@ export function buildPatientPDFDoc(patient: PatientRecord, profile: StudentProfi
   const ma = patient.modelAnalysis || ({} as any);
   const toothWidths = ma.toothWidths || {};
   const bolton = calculateBolton(toothWidths);
-  const careyUpper = calculateCarey(toothWidths, ma.maxillaryArchLengthAvailable ?? '');
+  const careyLower = calculateCarey(toothWidths, ma.mandibularArchLengthAvailable ?? '');
+  const nanceUpper = calculateNanceMaxillary(toothWidths, ma.maxillaryArchLengthAvailable ?? '');
   const ponts = calculatePonts(toothWidths);
-  const ttm = bolton.max12 > 0 ? bolton.max12 : careyUpper.totalToothMaterial;
-  const ashleyHowe = calculateAshleyHowe(ma.premolarBasalArchWidth ?? '', ttm);
+  const ashleyHowe = calculateAshleyHowe(ma.premolarBasalArchWidth ?? '', toothWidths);
+  const tanaka = calculateTanakaJohnston(toothWidths);
 
   startNewSlide('11. Study Model Analysis & Arch Discrepancy Inferences', 'Mesiodistal Tooth Material & Mathematical Arch Indices');
 
@@ -1987,11 +2002,18 @@ export function buildPatientPDFDoc(patient: PatientRecord, profile: StudentProfi
 
   const modelRows: (string | number)[][] = [
     [
-      "Carey's Arch Perimeter",
-      careyUpper.totalToothMaterial > 0 ? `${careyUpper.totalToothMaterial.toFixed(1)} mm` : '—',
+      "Carey's Mandibular Arch Perimeter",
+      careyLower.totalToothMaterial > 0 ? `${careyLower.totalToothMaterial.toFixed(1)} mm (35–45)` : '—',
+      ma.mandibularArchLengthAvailable ? `${Number(ma.mandibularArchLengthAvailable).toFixed(1)} mm` : '—',
+      careyLower.discrepancy !== null ? `${careyLower.discrepancy > 0 ? '+' : ''}${careyLower.discrepancy.toFixed(1)} mm` : '—',
+      careyLower.inference
+    ],
+    [
+      "Maxillary Arch Perimeter (Nance)",
+      nanceUpper.totalToothMaterial > 0 ? `${nanceUpper.totalToothMaterial.toFixed(1)} mm (15–25)` : '—',
       ma.maxillaryArchLengthAvailable ? `${Number(ma.maxillaryArchLengthAvailable).toFixed(1)} mm` : '—',
-      careyUpper.discrepancy !== null ? `${careyUpper.discrepancy > 0 ? '+' : ''}${careyUpper.discrepancy.toFixed(1)} mm` : '—',
-      careyUpper.inference
+      nanceUpper.discrepancy !== null ? `${nanceUpper.discrepancy > 0 ? '+' : ''}${nanceUpper.discrepancy.toFixed(1)} mm` : '—',
+      nanceUpper.inference
     ],
     [
       "Bolton's Anterior Ratio",
@@ -2016,12 +2038,25 @@ export function buildPatientPDFDoc(patient: PatientRecord, profile: StudentProfi
     ],
     [
       "Ashley-Howe's Analysis",
-      ashleyHowe.pmbaRatio !== null ? `PMBAW: ${ma.premolarBasalArchWidth ?? 'N/A'} mm` : '—',
+      ashleyHowe.totalToothMaterial > 0 ? `TTM: ${ashleyHowe.totalToothMaterial.toFixed(1)} mm` : '—',
       '> 44.0%',
       ashleyHowe.pmbaRatio !== null ? `${ashleyHowe.pmbaRatio.toFixed(1)}%` : '—',
       ashleyHowe.inference
     ],
   ];
+
+  const isMixedDentition = patient.modelAnalysis?.dentitionType === 'Mixed Dentition' ||
+    (typeof patient.age === 'number' && patient.age > 0 && patient.age <= 12 && patient.modelAnalysis?.dentitionType !== 'Permanent Dentition');
+
+  if (isMixedDentition) {
+    modelRows.push([
+      "Tanaka-Johnston Mixed Dentition",
+      tanaka.hasAll4MandibularIncisors ? `Σ Mand Inc: ${tanaka.mandibularIncisorSum.toFixed(1)} mm` : '—',
+      '75% Probability',
+      tanaka.predictedMaxillaryCpmPerQuadrant ? `Max: ${tanaka.predictedMaxillaryCpmPerQuadrant.toFixed(1)} | Mand: ${tanaka.predictedMandibularCpmPerQuadrant?.toFixed(1)} mm/quad` : '—',
+      tanaka.inference
+    ]);
+  }
 
   renderSlideTable(
     ['Analysis Model', 'Measured Value', 'Standard / Norm', 'Discrepancy', 'Diagnostic Clinical Inference'],

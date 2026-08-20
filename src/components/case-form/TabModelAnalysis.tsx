@@ -3,8 +3,10 @@ import { ArchShape, ArchAlignment, FacialSymmetry } from '../../types';
 import {
   calculateBolton,
   calculateCarey,
+  calculateNanceMaxillary,
   calculatePonts,
   calculateAshleyHowe,
+  calculateTanakaJohnston,
 } from '../../lib/calculations';
 import { Calculator, Grid, Award, CheckCircle2, AlertTriangle, XCircle } from 'lucide-react';
 import { SelectField, NumericSelectField } from './SelectField';
@@ -21,6 +23,8 @@ const ARCH_ALIGNMENT_OPTIONS = ['Crowding', 'Spacing', 'Rotation'] as const;
 const ARCH_SYMMETRY_OPTIONS = ['Symmetrical', 'Asymmetrical'] as const;
 
 interface TabModelAnalysisProps {
+  dentitionType?: 'Permanent Dentition' | 'Mixed Dentition';
+  setDentitionType?: (v: 'Permanent Dentition' | 'Mixed Dentition') => void;
   maxillaryArchShape: ArchShape;
   setMaxillaryArchShape: (v: ArchShape) => void;
   mandibularArchShape: ArchShape;
@@ -225,11 +229,10 @@ function ToothWidthArchSection({
 export const TabModelAnalysis: React.FC<TabModelAnalysisProps> = (props) => {
   const bolton = calculateBolton(props.toothWidths);
   const careyLower = calculateCarey(props.toothWidths, props.mandibularArchLengthAvailable ?? '');
+  const nanceUpper = calculateNanceMaxillary(props.toothWidths, props.maxillaryArchLengthAvailable ?? '');
   const ponts = calculatePonts(props.toothWidths, props.measuredPremolarWidth, props.measuredMolarWidth);
-
-  // Total Tooth Material for Ashley Howe (Maxillary 12 or Maxillary 10 from grid)
-  const ttm = bolton.max12 > 0 ? bolton.max12 : (bolton.max6 > 0 ? bolton.max6 * 1.65 : 0);
-  const ashleyHowe = calculateAshleyHowe(props.premolarBasalArchWidth || '', ttm);
+  const ashleyHowe = calculateAshleyHowe(props.premolarBasalArchWidth || '', props.toothWidths);
+  const tanaka = calculateTanakaJohnston(props.toothWidths);
 
   const getBadgeComponent = (badgeColor: 'green' | 'amber' | 'red' | 'blue') => {
     switch (badgeColor) {
@@ -271,6 +274,13 @@ export const TabModelAnalysis: React.FC<TabModelAnalysisProps> = (props) => {
 
         <div className={STACK}>
           <SelectField
+            label="Dentition Stage"
+            value={props.dentitionType || 'Permanent Dentition'}
+            onChange={(v) => props.setDentitionType && props.setDentitionType(v as 'Permanent Dentition' | 'Mixed Dentition')}
+            options={['Permanent Dentition', 'Mixed Dentition']}
+          />
+
+          <SelectField
             label="Maxillary Arch Shape"
             value={props.maxillaryArchShape}
             onChange={(v) => props.setMaxillaryArchShape(v as ArchShape)}
@@ -300,35 +310,38 @@ export const TabModelAnalysis: React.FC<TabModelAnalysisProps> = (props) => {
 
           <div>
             <label className="block text-slate-900 font-bold text-sm mb-1.5">
-              Individual Tooth Irregularities
+              Individual Irregularities (Rotations, Displacements)
             </label>
-            <input
-              type="text"
+            <textarea
+              className={FIELD}
+              rows={2}
               value={props.individualIrregularities}
               onChange={(e) => props.setIndividualIrregularities(e.target.value)}
-              placeholder="e.g. Rotated 12, Lingually displaced 32, Ectopic 13"
-              className={FIELD}
+              placeholder="e.g., 12 distolabially rotated, 23 buccally placed, 33 lingually tilted..."
             />
           </div>
         </div>
       </div>
 
-      {/* 2. Tooth Size Input Grid (FDI Notation) */}
+      {/* 2. Tooth Width Measurements (FDI) */}
       <div className={CARD}>
         <h3 className={SECTION_TITLE}>
           <Calculator className="w-4 h-4 text-teal-600" />
-          Tooth Size Input Grid (Mesiodistal Widths in mm - FDI Notation)
+          Tooth Material: Mesiodistal Widths (mm)
         </h3>
+        <p className="text-xs text-slate-700 leading-snug">
+          Tap any cell to select or enter a width. Widths update Bolton, Carey, Nance, Pont&apos;s, and Ashley-Howe analyses in real time.
+        </p>
 
-        <ToothWidthArchSection
-          title="Maxillary Arch (17 to 27)"
-          rightTeeth={MAXILLARY_RIGHT}
-          leftTeeth={MAXILLARY_LEFT}
-          toothWidths={props.toothWidths}
-          onUpdateToothWidth={props.onUpdateToothWidth}
-        />
+        <div className="space-y-4">
+          <ToothWidthArchSection
+            title="Maxillary Arch (17 to 27)"
+            rightTeeth={MAXILLARY_RIGHT}
+            leftTeeth={MAXILLARY_LEFT}
+            toothWidths={props.toothWidths}
+            onUpdateToothWidth={props.onUpdateToothWidth}
+          />
 
-        <div className="pt-3 border-t border-slate-200">
           <ToothWidthArchSection
             title="Mandibular Arch (47 to 37)"
             rightTeeth={MANDIBULAR_RIGHT}
@@ -347,10 +360,10 @@ export const TabModelAnalysis: React.FC<TabModelAnalysisProps> = (props) => {
         </h3>
 
         <div className={STACK}>
-          {/* 1. Carey's Arch Perimeter Analysis */}
+          {/* 1. Carey's Mandibular Arch Perimeter Analysis */}
           <div className={CARD}>
             <div className="flex flex-col gap-2 border-b border-slate-200 pb-2.5">
-              <h4 className="font-bold text-slate-900 text-sm">1. Carey's Mandibular Arch Perimeter Analysis</h4>
+              <h4 className="font-bold text-slate-900 text-sm">1. Carey&apos;s Mandibular Arch Perimeter Analysis</h4>
               {getBadgeComponent(careyLower.badgeColor)}
             </div>
 
@@ -364,17 +377,6 @@ export const TabModelAnalysis: React.FC<TabModelAnalysisProps> = (props) => {
                 step={0.5}
                 placeholder="Tap to select mandibular arch length…"
                 presets={[{ label: 'typical mandibular', val: 68 }]}
-              />
-
-              <NumericSelectField
-                label="Maxillary Arch Length Available (mm)"
-                value={props.maxillaryArchLengthAvailable}
-                onChange={props.setMaxillaryArchLengthAvailable}
-                min={55}
-                max={95}
-                step={0.5}
-                placeholder="Tap to select maxillary arch length…"
-                presets={[{ label: 'typical maxillary', val: 72 }]}
               />
 
               <div>
@@ -392,7 +394,7 @@ export const TabModelAnalysis: React.FC<TabModelAnalysisProps> = (props) => {
 
             <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 text-xs sm:text-sm space-y-1">
               <div className="flex justify-between font-semibold text-slate-800">
-                <span>Discrepancy:</span>
+                <span>Mandibular Discrepancy:</span>
                 <span className={careyLower.discrepancy !== null && careyLower.discrepancy < 0 ? 'text-rose-600 font-bold' : 'text-slate-900 font-bold'}>
                   {careyLower.discrepancy !== null ? `${careyLower.discrepancy > 0 ? '+' : ''}${careyLower.discrepancy.toFixed(1)} mm` : 'N/A'}
                 </span>
@@ -403,10 +405,55 @@ export const TabModelAnalysis: React.FC<TabModelAnalysisProps> = (props) => {
             </div>
           </div>
 
-          {/* 2. Bolton's Analysis */}
+          {/* 2. Maxillary Arch Perimeter Analysis (Nance) */}
           <div className={CARD}>
             <div className="flex flex-col gap-2 border-b border-slate-200 pb-2.5">
-              <h4 className="font-bold text-slate-900 text-sm">2. Bolton's Tooth Ratio Analysis</h4>
+              <h4 className="font-bold text-slate-900 text-sm">2. Maxillary Arch Perimeter Analysis (Nance)</h4>
+              {getBadgeComponent(nanceUpper.badgeColor)}
+            </div>
+
+            <div className={STACK}>
+              <NumericSelectField
+                label="Maxillary Arch Length Available (mm)"
+                value={props.maxillaryArchLengthAvailable}
+                onChange={props.setMaxillaryArchLengthAvailable}
+                min={55}
+                max={95}
+                step={0.5}
+                placeholder="Tap to select maxillary arch length…"
+                presets={[{ label: 'typical maxillary', val: 72 }]}
+              />
+
+              <div>
+                <label className="block text-slate-900 font-bold text-sm mb-1.5">Maxillary Tooth Material (15–25 mm)</label>
+                <div className="min-h-11 px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-900 text-sm flex items-center">
+                  {nanceUpper.totalToothMaterial > 0
+                    ? `${nanceUpper.totalToothMaterial.toFixed(1)} mm`
+                    : '—'}
+                </div>
+                <p className="text-xs text-slate-500 mt-1 leading-snug">
+                  Auto-calculated from upper teeth 15–25 in the tooth width grid above
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 text-xs sm:text-sm space-y-1">
+              <div className="flex justify-between font-semibold text-slate-800">
+                <span>Maxillary Discrepancy:</span>
+                <span className={nanceUpper.discrepancy !== null && nanceUpper.discrepancy < 0 ? 'text-rose-600 font-bold' : 'text-slate-900 font-bold'}>
+                  {nanceUpper.discrepancy !== null ? `${nanceUpper.discrepancy > 0 ? '+' : ''}${nanceUpper.discrepancy.toFixed(1)} mm` : 'N/A'}
+                </span>
+              </div>
+              <p className="font-bold text-teal-950 border-t border-slate-200 pt-1.5 mt-1">
+                Inference: {nanceUpper.inference}
+              </p>
+            </div>
+          </div>
+
+          {/* 3. Bolton's Analysis */}
+          <div className={CARD}>
+            <div className="flex flex-col gap-2 border-b border-slate-200 pb-2.5">
+              <h4 className="font-bold text-slate-900 text-sm">3. Bolton&apos;s Tooth Ratio Analysis</h4>
               {getBadgeComponent(bolton.anteriorBadgeColor)}
             </div>
 
@@ -429,10 +476,10 @@ export const TabModelAnalysis: React.FC<TabModelAnalysisProps> = (props) => {
             </div>
           </div>
 
-          {/* 3. Pont's Analysis */}
+          {/* 4. Pont's Analysis */}
           <div className={CARD}>
             <div className="flex flex-col gap-2 border-b border-slate-200 pb-2.5">
-              <h4 className="font-bold text-slate-900 text-sm">3. Pont's Arch Width Analysis</h4>
+              <h4 className="font-bold text-slate-900 text-sm">4. Pont&apos;s Arch Width Analysis</h4>
               {getBadgeComponent(ponts.badgeColor)}
             </div>
 
@@ -474,10 +521,10 @@ export const TabModelAnalysis: React.FC<TabModelAnalysisProps> = (props) => {
             </div>
           </div>
 
-          {/* 4. Ashley-Howe's Analysis */}
+          {/* 5. Ashley-Howe's Analysis */}
           <div className={CARD}>
             <div className="flex flex-col gap-2 border-b border-slate-200 pb-2.5">
-              <h4 className="font-bold text-slate-900 text-sm">4. Ashley-Howe's Analysis</h4>
+              <h4 className="font-bold text-slate-900 text-sm">5. Ashley-Howe&apos;s Analysis</h4>
               {getBadgeComponent(ashleyHowe.badgeColor)}
             </div>
 
@@ -496,10 +543,13 @@ export const TabModelAnalysis: React.FC<TabModelAnalysisProps> = (props) => {
               )}
 
               <div>
-                <label className="block text-slate-900 font-bold text-sm mb-1.5">Total Tooth Material (TTM mm)</label>
+                <label className="block text-slate-900 font-bold text-sm mb-1.5">Total Tooth Material (TTM 16–26 mm)</label>
                 <div className="min-h-11 px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-900 text-sm flex items-center">
-                  {ttm.toFixed(1)} mm
+                  {ashleyHowe.totalToothMaterial > 0 ? `${ashleyHowe.totalToothMaterial.toFixed(1)} mm` : '—'}
                 </div>
+                <p className="text-xs text-slate-500 mt-1 leading-snug">
+                  Auto-calculated from all 12 maxillary teeth (16–26) in the tooth width grid above
+                </p>
               </div>
             </div>
 
@@ -507,6 +557,69 @@ export const TabModelAnalysis: React.FC<TabModelAnalysisProps> = (props) => {
               <p className="font-bold text-teal-950">{ashleyHowe.inference}</p>
             </div>
           </div>
+
+          {/* 6. Tanaka-Johnston Mixed Dentition Analysis */}
+          {props.dentitionType === 'Mixed Dentition' ? (
+            <div className={CARD}>
+              <div className="flex flex-col gap-2 border-b border-slate-200 pb-2.5">
+                <div className="flex items-center justify-between">
+                  <h4 className="font-bold text-slate-900 text-sm">6. Tanaka-Johnston Mixed Dentition Analysis</h4>
+                  <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-amber-100 text-amber-900 border border-amber-200">
+                    Mixed Dentition Active
+                  </span>
+                </div>
+                {getBadgeComponent(tanaka.badgeColor)}
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-slate-900 font-bold text-xs mb-1">Mandibular 4 Incisors Sum (31, 32, 41, 42)</label>
+                  <div className="min-h-11 px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-900 text-sm flex items-center">
+                    {tanaka.hasAll4MandibularIncisors ? `${tanaka.mandibularIncisorSum.toFixed(1)} mm` : '—'}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-slate-900 font-bold text-xs mb-1">Predicted Maxillary 3-4-5 / Quadrant</label>
+                  <div className="min-h-11 px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-bold text-teal-700 text-sm flex items-center">
+                    {tanaka.predictedMaxillaryCpmPerQuadrant ? `${tanaka.predictedMaxillaryCpmPerQuadrant.toFixed(1)} mm (Total: ${tanaka.predictedMaxillaryTotal?.toFixed(1)} mm)` : '—'}
+                  </div>
+                </div>
+
+                <div className="sm:col-span-2">
+                  <label className="block text-slate-900 font-bold text-xs mb-1">Predicted Mandibular 3-4-5 / Quadrant</label>
+                  <div className="min-h-11 px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-bold text-teal-700 text-sm flex items-center">
+                    {tanaka.predictedMandibularCpmPerQuadrant ? `${tanaka.predictedMandibularCpmPerQuadrant.toFixed(1)} mm (Total: ${tanaka.predictedMandibularTotal?.toFixed(1)} mm)` : '—'}
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 text-sm">
+                <p className="font-bold text-teal-950">{tanaka.inference}</p>
+                <p className="text-xs text-slate-500 mt-1">
+                  Formulas (75% confidence): Maxillary = (Σ lower 4 incisors / 2) + 10.5 mm | Mandibular = (Σ lower 4 incisors / 2) + 10.0 mm
+                </p>
+              </div>
+            </div>
+          ) : (
+            <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 flex items-center justify-between gap-3 text-xs text-slate-600">
+              <div className="space-y-0.5">
+                <span className="font-bold text-slate-800">6. Tanaka-Johnston Mixed Dentition Analysis</span>
+                <p className="text-slate-500 text-[11px]">
+                  Applicable specifically to mixed dentition cases. (Current case set to Permanent Dentition).
+                </p>
+              </div>
+              {props.setDentitionType && (
+                <button
+                  type="button"
+                  onClick={() => props.setDentitionType!('Mixed Dentition')}
+                  className="px-3 py-1.5 bg-white hover:bg-slate-100 border border-slate-300 rounded-lg text-slate-700 font-bold text-xs shrink-0 cursor-pointer shadow-2xs"
+                >
+                  Activate for Mixed Dentition
+                </button>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </div>

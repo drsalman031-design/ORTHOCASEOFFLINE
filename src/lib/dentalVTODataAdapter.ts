@@ -315,7 +315,7 @@ export function adaptPatientToDentalVTO(
   processField('upperSpacingMm', getUpperSpacing(patient), 0);
   processField('lowerCrowdingMm', getLowerCrowding(patient), 0);
   processField('lowerSpacingMm', getLowerSpacing(patient), 0);
-  processField('u1SnDeg', getU1SNAngle(patient), 102);
+  processField('u1SnDeg', getU1SNAngle(patient), '');
   processField('u1NaDeg', getU1NAAngle(patient), '');
   processField('u1NaMm', getU1NAMm(patient), '');
   processField('impaDeg', getIMPA(patient), '');

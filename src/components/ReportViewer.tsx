@@ -195,7 +195,12 @@ export const ReportViewer: React.FC<ReportViewerProps> = ({
               </div>
 
               {/* Institution Header Stamp Preview */}
-              <div className="border border-dashed border-slate-300 dark:border-slate-700 rounded-xl p-4 bg-white dark:bg-slate-900 text-center space-y-1 text-slate-600 dark:text-slate-400 text-xs">
+              <div className="border border-dashed border-slate-300 dark:border-slate-700 rounded-xl p-4 bg-white dark:bg-slate-900 text-center space-y-2 text-slate-600 dark:text-slate-400 text-xs">
+                {profile.institutionLogoUrl && (
+                  <div className="w-12 h-12 mx-auto mb-1 flex items-center justify-center">
+                    <img src={profile.institutionLogoUrl} alt="Crest" className="max-w-full max-h-full object-contain" />
+                  </div>
+                )}
                 <p className="font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider text-sm">{profile.institution}</p>
                 <p className="font-medium text-slate-500">{profile.department}</p>
                 <p className="text-slate-400">

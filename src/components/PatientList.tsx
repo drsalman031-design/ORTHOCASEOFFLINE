@@ -12,9 +12,12 @@ import {
   ArchiveRestore,
   Trash2,
   FileCheck2,
+  FolderArchive,
+  Loader2,
 } from 'lucide-react';
 import { PatientRecord } from '../types';
 import { getCurrentUserAccount } from '../lib/authContext';
+import { exportAllCasesToEncryptedZip } from '../lib/fileBackupHelper';
 import { ConfirmDeleteModal } from './ConfirmDeleteModal';
 
 interface PatientListProps {
@@ -241,6 +244,19 @@ export const PatientList: React.FC<PatientListProps> = React.memo(({
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [activeFilter, setActiveFilter] = useState<FilterTab>(initialFilter);
   const [patientToDelete, setPatientToDelete] = useState<PatientRecord | null>(null);
+  const [isBatchExporting, setIsBatchExporting] = useState(false);
+
+  const handleBatchExport = async () => {
+    if (isBatchExporting || patients.length === 0) return;
+    setIsBatchExporting(true);
+    try {
+      await exportAllCasesToEncryptedZip(patients);
+    } catch (err) {
+      console.error('Batch export failed:', err);
+    } finally {
+      setIsBatchExporting(false);
+    }
+  };
 
   useEffect(() => {
     if (initialFilter) {
@@ -287,13 +303,34 @@ export const PatientList: React.FC<PatientListProps> = React.memo(({
 
   return (
     <div className="w-full max-w-4xl mx-auto space-y-5 pb-8 font-sans box-border min-w-0">
-      {/* HEADER & ACTIVE BADGE */}
+      {/* HEADER & ACTIVE BADGE & BATCH EXPORT */}
       <div className="flex justify-between items-center gap-2 min-w-0">
         <div>
           <h2 className="text-xl font-extrabold text-slate-900 tracking-tight">Case Directory</h2>
         </div>
-        <div className="bg-blue-50 border border-blue-200 text-[#00317e] px-3 py-1 rounded-lg shrink-0">
-          <span className="text-xs font-bold">{filteredPatients.length} Active</span>
+        <div className="flex items-center gap-2 shrink-0">
+          <button
+            type="button"
+            onClick={handleBatchExport}
+            disabled={isBatchExporting || patients.length === 0}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 hover:bg-slate-800 disabled:opacity-50 text-white rounded-lg text-xs font-bold shadow-2xs transition-all cursor-pointer"
+            title="Export all department cases into a single zipped encrypted vault"
+          >
+            {isBatchExporting ? (
+              <>
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                <span>Exporting...</span>
+              </>
+            ) : (
+              <>
+                <FolderArchive className="w-3.5 h-3.5 text-teal-400" />
+                <span>Batch Export (.zip)</span>
+              </>
+            )}
+          </button>
+          <div className="bg-blue-50 border border-blue-200 text-[#00317e] px-3 py-1 rounded-lg">
+            <span className="text-xs font-bold">{filteredPatients.length} Active</span>
+          </div>
         </div>
       </div>
 

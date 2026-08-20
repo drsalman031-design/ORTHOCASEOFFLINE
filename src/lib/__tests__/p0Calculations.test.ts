@@ -191,15 +191,51 @@ function runP0Tests() {
   console.log('\n--- [CRIT-06] Orthodontic Treatment Plan True ALD Flow ---');
   {
     // Patient has maxillaryArchLengthAvailable = 74 mm, but tooth widths sum to 72 mm (ALD = -4.0 mm crowding)
-    const patientWithCrowding: PatientRecord = {
+    const patientWithCrowding = {
       id: 'test-p1',
+      patientId: 'PT-001',
       name: 'Test Patient',
       age: 20,
       gender: 'Female',
-      date: '2026-08-19',
+      examDate: '2026-08-19',
+      contact: '1234567890',
+      archived: false,
+      createdAt: '2026-08-19T00:00:00.000Z',
+      updatedAt: '2026-08-19T00:00:00.000Z',
       chiefComplaint: {
         protrudingTeeth: false,
         irregularTeeth: true,
+        spacing: false,
+        missingTeeth: false,
+        jawProblem: false,
+        facialAesthetics: false,
+        otherText: '',
+        duration: '<6 months',
+      },
+      medicalHistory: {
+        diabetes: false,
+        hypertension: false,
+        asthma: false,
+        allergy: false,
+        bleedingDisorder: false,
+        otherMedical: false,
+        noSignificantHistory: true,
+      },
+      dentalHistory: {
+        previousExtraction: false,
+        previousOrtho: false,
+        trauma: false,
+        habits: false,
+        oralHygiene: 'Good',
+      },
+      habitHistory: {
+        thumbSucking: false,
+        tongueThrusting: false,
+        mouthBreathing: false,
+        lipBiting: false,
+        bruxism: false,
+        otherHabits: false,
+        noHabits: true,
       },
       modelAnalysis: {
         maxillaryArchLengthAvailable: 74,
@@ -209,7 +245,7 @@ function runP0Tests() {
           '41': 6.0, '42': 6.5, '43': 7.5, '44': 8.0, '45': 8.0,
         }, // Mandibular sum = 72.0 mm -> Mandibular ALD = 68 - 72 = -4.0 mm
       },
-    };
+    } as unknown as PatientRecord;
 
     const plan = generateOrthoTreatmentPlan(patientWithCrowding);
     const justPoint = plan.extractionDecision.points.find(p => p.id === 'ed-3');
@@ -217,14 +253,51 @@ function runP0Tests() {
     assert(justPoint?.text.includes('-4.0 mm') || justPoint?.text.includes('ALD'), 'CRIT-06.1: Treatment plan references true calculated ALD, not absolute 74 mm perimeter', justPoint?.text);
 
     // Patient with mild ALD (+15.0 mm spacing):
-    const patientWithSpacing: PatientRecord = {
+    const patientWithSpacing = {
       id: 'test-p2',
+      patientId: 'PT-002',
       name: 'Test Patient Spacing',
       age: 18,
       gender: 'Male',
+      examDate: '2026-08-19',
+      contact: '1234567890',
+      archived: false,
+      createdAt: '2026-08-19T00:00:00.000Z',
+      updatedAt: '2026-08-19T00:00:00.000Z',
       chiefComplaint: {
         protrudingTeeth: false,
         irregularTeeth: false,
+        spacing: true,
+        missingTeeth: false,
+        jawProblem: false,
+        facialAesthetics: false,
+        otherText: '',
+        duration: '<6 months',
+      },
+      medicalHistory: {
+        diabetes: false,
+        hypertension: false,
+        asthma: false,
+        allergy: false,
+        bleedingDisorder: false,
+        otherMedical: false,
+        noSignificantHistory: true,
+      },
+      dentalHistory: {
+        previousExtraction: false,
+        previousOrtho: false,
+        trauma: false,
+        habits: false,
+        oralHygiene: 'Good',
+      },
+      habitHistory: {
+        thumbSucking: false,
+        tongueThrusting: false,
+        mouthBreathing: false,
+        lipBiting: false,
+        bruxism: false,
+        otherHabits: false,
+        noHabits: true,
       },
       modelAnalysis: {
         mandibularArchLengthAvailable: 70,
@@ -233,7 +306,7 @@ function runP0Tests() {
           '41': 5.0, '42': 5.5, '43': 6.5, '44': 7.0, '45': 7.0,
         }, // Mandibular sum = 55.0 mm -> ALD = +15.0 mm
       },
-    };
+    } as unknown as PatientRecord;
     const planSpacing = generateOrthoTreatmentPlan(patientWithSpacing);
     const extRec = planSpacing.extractionDecision.points.find(p => p.id === 'ed-1');
     assert(extRec?.text.includes('Non-Extraction'), 'CRIT-06.2: Non-extraction planned for positive arch length discrepancy', extRec?.text);

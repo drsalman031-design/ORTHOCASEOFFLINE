@@ -1,5 +1,14 @@
 import { PatientRecord, ChiefComplaint, HabitHistory, ModelAnalysisSection } from '../types';
-import { sumPontsPremolarWidth44 } from './calculations';
+import {
+  calculateBolton,
+  calculateCarey,
+  calculateNanceMaxillary,
+  calculatePonts,
+  calculateAshleyHowe,
+  calculateTanakaJohnston,
+  sumAnterior6FromFdi,
+  sumPontsPremolarWidth44,
+} from './calculations';
 
 export interface DiagnosisPointItem {
   id: string;
@@ -66,55 +75,97 @@ export function generateOrthoDiagnosis(patient: PatientRecord): FullOrthoDiagnos
   const extraoralPoints: DiagnosisPointItem[] = [];
 
   // Facial Pattern & Form
-  const facialForm = extra.facialForm || 'Mesoprosopic';
-  const headShape = extra.shapeOfHead || 'Mesocephalic';
-  const bodyType = extra.bodyType || 'Mesomorph';
-  extraoralPoints.push({
-    id: 'eo-1',
-    text: `Facial Pattern & Morphotype: The patient exhibits a ${facialForm} facial form characterized by balanced facial length-to-width proportions, a ${headShape} head shape, on a ${bodyType.toLowerCase()} physical body build.`,
-  });
+  const facialForm = extra.facialForm;
+  const headShape = extra.shapeOfHead;
+  const bodyType = extra.bodyType;
+  if (facialForm || headShape || bodyType) {
+    extraoralPoints.push({
+      id: 'eo-1',
+      text: `Facial Pattern & Morphotype: The patient exhibits a ${facialForm || 'balanced'} facial form${headShape ? `, a ${headShape} head shape` : ''}${bodyType ? `, on a ${bodyType.toLowerCase()} physical body build` : ''}.`,
+    });
+  } else {
+    extraoralPoints.push({
+      id: 'eo-1',
+      text: 'Facial Pattern & Morphotype: Clinical morphotype and facial form evaluation not yet recorded.',
+    });
+  }
 
   // Facial Symmetry
-  const symmetry = extra.symmetry || 'Symmetrical';
-  let symText = `Facial Symmetry: Clinical examination demonstrates a face that is ${symmetry.toLowerCase()}`;
-  if (extra.maxillaryMidline || extra.mandibularMidline) {
-    symText += ` with the maxillary dental midline ${extra.maxillaryMidline || 'coincident with the facial midline'} and mandibular dental midline ${extra.mandibularMidline || 'coincident with the facial midline'}.`;
+  const symmetry = extra.symmetry;
+  if (symmetry) {
+    let symText = `Facial Symmetry: Clinical examination demonstrates a face that is ${symmetry.toLowerCase()}`;
+    if (extra.maxillaryMidline || extra.mandibularMidline) {
+      symText += ` with the maxillary dental midline ${extra.maxillaryMidline || 'coincident with the facial midline'} and mandibular dental midline ${extra.mandibularMidline || 'coincident with the facial midline'}.`;
+    } else {
+      symText += ' across the vertical facial midline with no clinically significant soft tissue or skeletal asymmetry.';
+    }
+    extraoralPoints.push({ id: 'eo-2', text: symText });
   } else {
-    symText += ' with well-balanced facial thirds across the vertical reference line and no clinically significant soft tissue or skeletal asymmetry.';
+    extraoralPoints.push({ id: 'eo-2', text: 'Facial Symmetry: Facial symmetry evaluation not yet recorded.' });
   }
-  extraoralPoints.push({ id: 'eo-2', text: symText });
 
   // Facial Proportions & Heights
-  const fmaClinical = extra.clinicalFma ? ` Clinical Tweed mandibular plane angle evaluation indicates a ${extra.clinicalFma} divergence vector.` : ' Vertical facial heights are well proportioned.';
-  extraoralPoints.push({
-    id: 'eo-3',
-    text: `Facial Proportions: The lower facial third height is proportionate to the middle facial third height, maintaining an aesthetically pleasing vertical facial balance.${fmaClinical}`,
-  });
+  if (extra.clinicalFma) {
+    extraoralPoints.push({
+      id: 'eo-3',
+      text: `Facial Proportions: Clinical Tweed mandibular plane angle evaluation indicates a ${extra.clinicalFma} divergence vector.`,
+    });
+  } else {
+    extraoralPoints.push({
+      id: 'eo-3',
+      text: 'Facial Proportions: Lower facial third and clinical mandibular plane angle not yet recorded.',
+    });
+  }
 
   // Facial Profile & Divergence
-  const profile = extra.profile || 'Convex';
-  const div = extra.facialDivergence || 'Straight';
-  extraoralPoints.push({
-    id: 'eo-4',
-    text: `Facial Profile & Divergence: Soft tissue examination reveals a ${profile} profile with ${div.toLowerCase()} facial divergence, secondary to underlying jaw base position and soft tissue support.`,
-  });
+  const profile = extra.profile;
+  const div = extra.facialDivergence;
+  if (profile || div) {
+    extraoralPoints.push({
+      id: 'eo-4',
+      text: `Facial Profile & Divergence: Soft tissue examination reveals a ${profile || 'harmonious'} profile${div ? ` with ${div.toLowerCase()} facial divergence` : ''}, secondary to underlying jaw base position and soft tissue support.`,
+    });
+  } else {
+    extraoralPoints.push({
+      id: 'eo-4',
+      text: 'Facial Profile & Divergence: Profile and divergence evaluation not yet recorded.',
+    });
+  }
 
   // Lip Competence & Tonicity
-  const lipTonicity = extra.lipPostureTonicity || 'Incompetent';
-  const interlabialGap = extra.interlabialGapMm !== '' && extra.interlabialGapMm !== undefined ? `${extra.interlabialGapMm} mm` : '4.0 mm';
-  extraoralPoints.push({
-    id: 'eo-5',
-    text: `Lip Posture & Competence: The patient presents with ${lipTonicity.toLowerCase()} lip posture at rest, exhibiting an increased interlabial gap of ${interlabialGap} accompanied by mentalis muscle hyperactivity upon forced lip closure.`,
-  });
+  const lipTonicity = extra.lipPostureTonicity;
+  const interlabialGap = extra.interlabialGapMm !== '' && extra.interlabialGapMm !== undefined ? `${extra.interlabialGapMm} mm` : null;
+  if (lipTonicity || interlabialGap) {
+    extraoralPoints.push({
+      id: 'eo-5',
+      text: `Lip Posture & Competence: The patient presents with ${lipTonicity ? lipTonicity.toLowerCase() : 'evaluated'} lip posture at rest${interlabialGap ? `, exhibiting an interlabial gap of ${interlabialGap}` : ''}.`,
+    });
+  } else {
+    extraoralPoints.push({
+      id: 'eo-5',
+      text: 'Lip Posture & Competence: Resting lip posture and tonicity not yet recorded.',
+    });
+  }
 
   // Smile Analysis & Soft Tissue Angles
-  const incisorStomion = extra.incisorStomionMm !== '' && extra.incisorStomionMm !== undefined ? `${extra.incisorStomionMm} mm` : '3.0 mm';
-  const nasolabial = extra.nasolabialAngle || 'Acute';
-  const mentolabial = extra.mentolabialSulcus || 'Normal';
-  extraoralPoints.push({
-    id: 'eo-6',
-    text: `Smile Analysis & Soft Tissue Profile Angles: Upper central incisor display at rest measures ${incisorStomion} with full clinical crown display on smiling, complemented by an ${nasolabial.toLowerCase()} nasolabial angle and a ${mentolabial.toLowerCase()} mentolabial sulcus depth.`,
-  });
+  const incisorStomion = extra.incisorStomionMm !== '' && extra.incisorStomionMm !== undefined ? `${extra.incisorStomionMm} mm` : null;
+  const nasolabial = extra.nasolabialAngle;
+  const mentolabial = extra.mentolabialSulcus;
+  if (incisorStomion || nasolabial || mentolabial) {
+    const parts: string[] = [];
+    if (incisorStomion) parts.push(`Upper central incisor display at rest measures ${incisorStomion}`);
+    if (nasolabial) parts.push(`nasolabial angle is ${nasolabial.toLowerCase()}`);
+    if (mentolabial) parts.push(`mentolabial sulcus depth is ${mentolabial.toLowerCase()}`);
+    extraoralPoints.push({
+      id: 'eo-6',
+      text: `Smile Analysis & Soft Tissue Profile Angles: ${parts.join(', ')}.`,
+    });
+  } else {
+    extraoralPoints.push({
+      id: 'eo-6',
+      text: 'Smile Analysis & Soft Tissue Angles: Nasolabial angle, mentolabial sulcus, and incisor exposure not yet recorded.',
+    });
+  }
 
   // --- 3. FUNCTIONAL DIAGNOSIS ---
   const func = patient.functionalTmj || {};
@@ -131,12 +182,12 @@ export function generateOrthoDiagnosis(patient: PatientRecord): FullOrthoDiagnos
   if (tmjIssues.length > 0) {
     functionalPoints.push({
       id: 'fn-1',
-      text: `Temporomandibular Joint Assessment: Clinical examination reveals positive TMJ findings including ${tmjIssues.join(', ')}, with a maximum unassisted mouth opening of ${func.maxOpeningMm || 42} mm and a freeway space of ${func.freewaySpaceMm || 2.0} mm.`,
+      text: `Temporomandibular Joint Assessment: Clinical examination reveals positive TMJ findings including ${tmjIssues.join(', ')}${func.maxOpeningMm ? `, with a maximum unassisted mouth opening of ${func.maxOpeningMm} mm` : ''}${func.freewaySpaceMm ? ` and a freeway space of ${func.freewaySpaceMm} mm` : ''}.`,
     });
   } else {
     functionalPoints.push({
       id: 'fn-1',
-      text: `Temporomandibular Joint Assessment: Bilateral clinical palpation of the condyles and muscles of mastication demonstrates non-tender structures without joint clicking, crepitus, or restriction, exhibiting a normal maximum mouth opening of ${func.maxOpeningMm || 45} mm and a physiological freeway space of ${func.freewaySpaceMm || 2.5} mm.`,
+      text: `Temporomandibular Joint Assessment: Bilateral clinical palpation demonstrates non-tender TMJ structures without joint clicking or crepitus${func.maxOpeningMm ? `, with maximum mouth opening of ${func.maxOpeningMm} mm` : ''}${func.freewaySpaceMm ? ` and freeway space of ${func.freewaySpaceMm} mm` : ''}.`,
     });
   }
 
@@ -151,7 +202,7 @@ export function generateOrthoDiagnosis(patient: PatientRecord): FullOrthoDiagnos
 
   functionalPoints.push({
     id: 'fn-2',
-    text: `Respiratory Pattern: Clinical respiratory assessment confirms a predominantly ${resp.toLowerCase()} breathing pattern with clear nasal airway passage.`,
+    text: `Respiratory Pattern: Clinical respiratory assessment confirms a predominantly ${resp.toLowerCase()} breathing pattern.`,
   });
 
   if (activeHabits.length > 0) {
@@ -162,7 +213,7 @@ export function generateOrthoDiagnosis(patient: PatientRecord): FullOrthoDiagnos
   } else {
     functionalPoints.push({
       id: 'fn-3',
-      text: 'Habit History: Detailed clinical history confirms the total absence of active or retained deleterious oral habits such as thumb sucking, tongue thrusting, or bruxism.',
+      text: 'Habit History: Detailed clinical history confirms the absence of deleterious oral habits.',
     });
   }
 
@@ -182,7 +233,7 @@ export function generateOrthoDiagnosis(patient: PatientRecord): FullOrthoDiagnos
 
   // Skeletal Class Calculation
   const anbVal = typeof steiner.anb?.pre === 'number' ? steiner.anb.pre : null;
-  let skClass = patient.diagnosisAndPlan?.skeletalClassification || 'Skeletal Class II';
+  let skClass = patient.diagnosisAndPlan?.skeletalClassification || 'Skeletal Class I';
   if (anbVal !== null) {
     if (anbVal > 4) skClass = 'Skeletal Class II';
     else if (anbVal < 1) skClass = 'Skeletal Class III';
@@ -192,30 +243,30 @@ export function generateOrthoDiagnosis(patient: PatientRecord): FullOrthoDiagnos
   // Cause / Jaw Localization
   const snaVal = typeof steiner.sna?.pre === 'number' ? steiner.sna.pre : null;
   const snbVal = typeof steiner.snb?.pre === 'number' ? steiner.snb.pre : null;
-  let causeStr = 'a combination of maxillary prognathism and mandibular retrognathism relative to the anterior cranial base';
+  let causeStr = 'mild anteroposterior apical base variance';
   if (snaVal !== null && snbVal !== null) {
     if (snaVal > 84 && snbVal < 78) causeStr = 'maxillary prognathism combined with mandibular retrognathism relative to the anterior cranial base';
     else if (snaVal > 84) causeStr = 'maxillary prognathism with a normal anteroposterior mandibular base';
     else if (snbVal < 78) causeStr = 'mandibular retrognathism with a normal maxilla';
     else if (snbVal > 82) causeStr = 'mandibular prognathism';
-    else causeStr = 'a mild anteroposterior apical base discrepancy';
+    else causeStr = 'balanced anteroposterior apical bases';
   } else if (cephDisc.apicalBaseFault) {
     causeStr = cephDisc.apicalBaseFault;
   }
 
   skeletalPoints.push({
     id: 'sk-1',
-    text: `Anteroposterior Skeletal Pattern: Cephalometric and clinical evaluation establishes a underlying ${skClass} jaw base relationship.`,
+    text: `Anteroposterior Skeletal Pattern: Cephalometric and clinical evaluation establishes a ${skClass} jaw base relationship.`,
   });
 
   skeletalPoints.push({
     id: 'sk-2',
-    text: `Anteroposterior Etiology & Jaw Localization: The anteroposterior jaw discrepancy is primarily attributed to ${causeStr}.`,
+    text: `Anteroposterior Etiology & Jaw Localization: The anteroposterior jaw relationship is characterized by ${causeStr}.`,
   });
 
   // Vertical Pattern
   const fmaVal = typeof steiner.mandibularPlaneAngle?.pre === 'number' ? steiner.mandibularPlaneAngle.pre : null;
-  let vertPattern = vertJaw.divergencePattern || 'Hyperdivergent / High Angle';
+  let vertPattern = vertJaw.divergencePattern || 'Normodivergent';
   if (fmaVal !== null) {
     if (fmaVal > 30) vertPattern = 'High Angle / Hyperdivergent growth pattern with a predominant vertical facial vector';
     else if (fmaVal < 22) vertPattern = 'Low Angle / Hypodivergent growth pattern with a predominant horizontal facial vector';
@@ -224,65 +275,116 @@ export function generateOrthoDiagnosis(patient: PatientRecord): FullOrthoDiagnos
 
   skeletalPoints.push({
     id: 'sk-3',
-    text: `Vertical Skeletal Pattern: Cephalometric analysis establishes a ${vertPattern}.`,
+    text: `Vertical Skeletal Pattern: Cephalometric evaluation indicates a ${vertPattern}.`,
   });
 
   // Transverse & Growth Status
-  const pubStatus = patient.radiographyGrowth?.pubertalStatus || 'Post-pubertal';
-  const cvm = patient.radiographyGrowth?.cvmStage || 'CVM Stage 4/5';
-  skeletalPoints.push({
-    id: 'sk-4',
-    text: `Transverse Dimensions & Growth Maturity: Maxillary and mandibular basal arch widths are well matched in the transverse plane, while skeletal maturation indicators confirm a ${pubStatus.toLowerCase()} status (${cvm}).`,
-  });
+  const pubStatus = patient.radiographyGrowth?.pubertalStatus;
+  const cvm = patient.radiographyGrowth?.cvmStage;
+  if (pubStatus || cvm) {
+    skeletalPoints.push({
+      id: 'sk-4',
+      text: `Skeletal Growth Maturity: Maturation indicators confirm a ${pubStatus ? pubStatus.toLowerCase() : 'recorded'} status${cvm ? ` (${cvm})` : ''}.`,
+    });
+  } else {
+    skeletalPoints.push({
+      id: 'sk-4',
+      text: 'Skeletal Growth Maturity: Cervical vertebral or hand-wrist maturation stage not yet recorded.',
+    });
+  }
 
   // --- 5. DENTAL DIAGNOSIS ---
   const intra = patient.intraoralSection || {};
   const dentalPoints: DiagnosisPointItem[] = [];
 
-  const molR = intra.buccalOcclusionRight || 'Class II end-on';
-  const molL = intra.buccalOcclusionLeft || 'Class II end-on';
-  dentalPoints.push({
-    id: 'dt-1',
-    text: `Molar Occlusal Relationship: Permanent first molar occlusion demonstrates a ${molR} on the right side and a ${molL} on the left side.`,
-  });
+  const molR = intra.buccalOcclusionRight || intra.canineRelationRight;
+  const molL = intra.buccalOcclusionLeft || intra.canineRelationLeft;
+  if (molR || molL) {
+    dentalPoints.push({
+      id: 'dt-1',
+      text: `Molar Occlusal Relationship: Permanent first molar occlusion demonstrates ${molR || 'Class I'} on the right side and ${molL || 'Class I'} on the left side.`,
+    });
+  } else {
+    dentalPoints.push({
+      id: 'dt-1',
+      text: 'Molar Occlusal Relationship: Molar relationships not yet recorded.',
+    });
+  }
 
-  const canR = intra.canineRelationRight || 'Class II';
-  const canL = intra.canineRelationLeft || 'Class II';
-  dentalPoints.push({
-    id: 'dt-2',
-    text: `Canine Occlusal Relationship: Permanent canine occlusion presents a ${canR} relationship on the right side and a ${canL} relationship on the left side.`,
-  });
+  const canR = intra.canineRelationRight;
+  const canL = intra.canineRelationLeft;
+  if (canR || canL) {
+    dentalPoints.push({
+      id: 'dt-2',
+      text: `Canine Occlusal Relationship: Permanent canine occlusion presents a ${canR || 'Class I'} relationship on the right side and a ${canL || 'Class I'} relationship on the left side.`,
+    });
+  } else {
+    dentalPoints.push({
+      id: 'dt-2',
+      text: 'Canine Occlusal Relationship: Canine relationships not yet recorded.',
+    });
+  }
 
-  const incRel = intra.incisorRelation || 'Class II Division 1';
-  dentalPoints.push({
-    id: 'dt-3',
-    text: `Incisor Classification: Incisor relation is categorized as ${incRel}, characterized by proclined maxillary central incisors and an increased sagittal gap.`,
-  });
+  const incRel = intra.incisorRelation;
+  if (incRel) {
+    dentalPoints.push({
+      id: 'dt-3',
+      text: `Incisor Classification: Incisor relation is categorized as ${incRel}.`,
+    });
+  } else {
+    dentalPoints.push({
+      id: 'dt-3',
+      text: 'Incisor Classification: Incisor relationship not yet recorded.',
+    });
+  }
 
-  const oj = intra.overjetMm !== '' && intra.overjetMm !== undefined ? `${intra.overjetMm} mm` : '6.0 mm';
-  const ob = intra.overbiteMm !== '' && intra.overbiteMm !== undefined ? `${intra.overbiteMm} mm` : '4.5 mm';
-  dentalPoints.push({
-    id: 'dt-4',
-    text: `Overjet & Overbite Dimensions: The patient presents with an increased overjet measuring ${oj} and an increased overbite measuring ${ob} (deep bite with lower incisor impinging tendency).`,
-  });
+  const oj = intra.overjetMm !== '' && intra.overjetMm !== undefined ? `${intra.overjetMm} mm` : null;
+  const ob = intra.overbiteMm !== '' && intra.overbiteMm !== undefined ? `${intra.overbiteMm} mm` : null;
+  if (oj || ob) {
+    dentalPoints.push({
+      id: 'dt-4',
+      text: `Overjet & Overbite Dimensions: Measured overjet is ${oj || 'within normal range'} and measured overbite is ${ob || 'within normal range'}.`,
+    });
+  } else {
+    dentalPoints.push({
+      id: 'dt-4',
+      text: 'Overjet & Overbite Dimensions: Overjet and overbite measurements not yet recorded.',
+    });
+  }
 
-  const align = intra.archInadequacies || intra.displacements || 'Moderate maxillary and mandibular anterior dental crowding';
-  dentalPoints.push({
-    id: 'dt-5',
-    text: `Arch Alignment & Form: Intraoral examination reveals ${align.toLowerCase()}, with a ${intra.archFormUpper || 'U-shaped'} upper arch form and a ${intra.archFormLower || 'U-shaped'} lower arch form.`,
-  });
+  const align = intra.archInadequacies || intra.displacements;
+  if (align) {
+    dentalPoints.push({
+      id: 'dt-5',
+      text: `Arch Alignment & Form: Intraoral examination reveals ${align.toLowerCase()}${intra.archFormUpper ? `, with a ${intra.archFormUpper.toLowerCase()} upper arch form` : ''}${intra.archFormLower ? ` and a ${intra.archFormLower.toLowerCase()} lower arch form` : ''}.`,
+    });
+  } else {
+    dentalPoints.push({
+      id: 'dt-5',
+      text: 'Arch Alignment & Form: Dental arch alignment and arch form not yet recorded.',
+    });
+  }
 
-  const midDev = intra.midlineTogether || 'Coincident with facial midline';
-  dentalPoints.push({
-    id: 'dt-6',
-    text: `Dental Midline Analysis: Maxillary and mandibular dental midlines are ${midDev.toLowerCase()}.`,
-  });
+  const midDev = intra.midlineTogether;
+  if (midDev) {
+    dentalPoints.push({
+      id: 'dt-6',
+      text: `Dental Midline Analysis: Dental midlines are ${midDev.toLowerCase()}.`,
+    });
+  } else {
+    dentalPoints.push({
+      id: 'dt-6',
+      text: 'Dental Midline Analysis: Dental midline evaluation not yet recorded.',
+    });
+  }
 
-  const cross = intra.crossbite && intra.crossbite !== 'None' ? intra.crossbite : 'No anterior or posterior crossbite detected';
-  dentalPoints.push({
-    id: 'dt-7',
-    text: `Crossbite & Special Occlusal Features: ${cross}.`,
-  });
+  const cross = intra.crossbite && intra.crossbite !== 'None' ? intra.crossbite : null;
+  if (cross) {
+    dentalPoints.push({
+      id: 'dt-7',
+      text: `Crossbite & Special Occlusal Features: ${cross}.`,
+    });
+  }
 
   const dentalAnomalies: string[] = [];
   if (intra.missingTeeth && intra.missingTeeth !== 'None') dentalAnomalies.push(`missing teeth (${intra.missingTeeth})`);
@@ -294,11 +396,6 @@ export function generateOrthoDiagnosis(patient: PatientRecord): FullOrthoDiagnos
       id: 'dt-8',
       text: `Dental Anomalies & Pathology: Intraoral findings confirm ${dentalAnomalies.join('; ')}.`,
     });
-  } else {
-    dentalPoints.push({
-      id: 'dt-8',
-      text: 'Dental Anomalies & Pathology: Complete dental arch examination reveals no missing teeth, impacted teeth, microdontia, or active carious lesions.',
-    });
   }
 
   // --- 6. CEPHALOMETRIC SUMMARY ---
@@ -309,37 +406,37 @@ export function generateOrthoDiagnosis(patient: PatientRecord): FullOrthoDiagnos
   if (typeof steiner.sna?.pre === 'number' && typeof steiner.snb?.pre === 'number') {
     cephPoints.push({
       id: 'cp-1',
-      text: `Steiner's Sagittal Parameters: Cephalometric analysis yields SNA = ${steiner.sna.pre}° (Norm: 82°), SNB = ${steiner.snb.pre}° (Norm: 80°), and ANB = ${steiner.anb?.pre ?? (steiner.sna.pre - steiner.snb.pre)}° (Norm: 2°), establishing a Skeletal Class ${(((steiner.anb?.pre ?? 2) as number) > 4) ? 'II' : 'I'} jaw base discrepancy.`,
+      text: `Steiner's Sagittal Parameters: Cephalometric analysis yields SNA = ${steiner.sna.pre}° (Norm: 82°), SNB = ${steiner.snb.pre}° (Norm: 80°), and ANB = ${steiner.anb?.pre ?? (steiner.sna.pre - steiner.snb.pre)}° (Norm: 2°), establishing a Skeletal Class ${(((steiner.anb?.pre ?? (steiner.sna.pre - steiner.snb.pre)) as number) > 4) ? 'II' : (((steiner.anb?.pre ?? (steiner.sna.pre - steiner.snb.pre)) as number) < 1) ? 'III' : 'I'} jaw base relationship.`,
     });
   } else {
     cephPoints.push({
       id: 'cp-1',
-      text: "Steiner's Sagittal Parameters: The ANB differential establishes a Skeletal Class II jaw base relationship characterized by maxillary prognathism and mandibular retrognathism.",
+      text: "Steiner's Sagittal Parameters: Cephalometric sagittal angles (SNA, SNB, ANB) not yet recorded.",
     });
   }
 
   if (typeof steiner.upperIncisorToNaDeg?.pre === 'number' && typeof steiner.lowerIncisorToNbDeg?.pre === 'number') {
     cephPoints.push({
       id: 'cp-2',
-      text: `Dentoalveolar Inclination: Upper central incisor to NA plane measures ${steiner.upperIncisorToNaDeg.pre}° / ${steiner.upperIncisorToNaMm?.pre ?? 4} mm (proclined); lower central incisor to NB plane measures ${steiner.lowerIncisorToNbDeg.pre}° / ${steiner.lowerIncisorToNbMm?.pre ?? 4} mm (proclined).`,
+      text: `Dentoalveolar Inclination: Upper central incisor to NA plane measures ${steiner.upperIncisorToNaDeg.pre}° / ${steiner.upperIncisorToNaMm?.pre ?? '—'} mm; lower central incisor to NB plane measures ${steiner.lowerIncisorToNbDeg.pre}° / ${steiner.lowerIncisorToNbMm?.pre ?? '—'} mm.`,
     });
   } else {
     cephPoints.push({
       id: 'cp-2',
-      text: 'Dentoalveolar Inclination: Both maxillary and mandibular incisors demonstrate proclination relative to their respective NA and NB basal planes.',
+      text: 'Dentoalveolar Inclination: Incisor inclinations (UI-NA, LI-NB) not yet recorded.',
     });
   }
 
   if (typeof downs.mandibularPlaneAngle?.pre === 'number' || typeof steiner.mandibularPlaneAngle?.pre === 'number') {
-    const mpa = steiner.mandibularPlaneAngle?.pre ?? downs.mandibularPlaneAngle?.pre ?? 32;
+    const mpa = steiner.mandibularPlaneAngle?.pre ?? downs.mandibularPlaneAngle?.pre;
     cephPoints.push({
       id: 'cp-3',
-      text: `Vertical Skeletal Metrics: The mandibular plane angle to the cranial base (SN-GoGn / Tweed FMA) measures ${mpa}° (Norm: 32°), demonstrating a hyperdivergent growth tendency.`,
+      text: `Vertical Skeletal Metrics: Mandibular plane angle measures ${mpa}° (Norm: 32° / 25° FMA).`,
     });
   } else {
     cephPoints.push({
       id: 'cp-3',
-      text: 'Vertical Skeletal Metrics: Cephalometric vertical values demonstrate an increased mandibular plane angle and hyperdivergent vertical growth pattern.',
+      text: 'Vertical Skeletal Metrics: Vertical skeletal angles (SN-GoGn, FMA) not yet recorded.',
     });
   }
 
@@ -352,151 +449,144 @@ export function generateOrthoDiagnosis(patient: PatientRecord): FullOrthoDiagnos
 
   // --- 7. STEINER'S STICK DIAGNOSIS ---
   const steinerStickPoints: DiagnosisPointItem[] = [];
-  const u1NaMm = steiner.upperIncisorToNaMm?.pre ?? 6;
-  const u1NaDeg = steiner.upperIncisorToNaDeg?.pre ?? 28;
-  const l1NbMm = steiner.lowerIncisorToNbMm?.pre ?? 6;
-  const l1NbDeg = steiner.lowerIncisorToNbDeg?.pre ?? 30;
-  const iiAngle = steiner.interincisalAngle?.pre ?? 118;
+  const u1NaMm = steiner.upperIncisorToNaMm?.pre;
+  const u1NaDeg = steiner.upperIncisorToNaDeg?.pre;
+  const l1NbMm = steiner.lowerIncisorToNbMm?.pre;
+  const l1NbDeg = steiner.lowerIncisorToNbDeg?.pre;
+  const iiAngle = steiner.interincisalAngle?.pre;
 
-  steinerStickPoints.push({
-    id: 'st-1',
-    text: `Maxillary Incisor Position: Upper central incisor position to NA line measures ${u1NaMm} mm and ${u1NaDeg}°, indicating marked maxillary dentoalveolar protrusion and forward incisal placement.`,
-  });
+  if (u1NaMm !== undefined && u1NaDeg !== undefined) {
+    steinerStickPoints.push({
+      id: 'st-1',
+      text: `Maxillary Incisor Position: Upper central incisor position to NA line measures ${u1NaMm} mm and ${u1NaDeg}°.`,
+    });
+  } else {
+    steinerStickPoints.push({
+      id: 'st-1',
+      text: 'Maxillary Incisor Position: Upper incisor to NA line measurements not yet recorded.',
+    });
+  }
 
-  steinerStickPoints.push({
-    id: 'st-2',
-    text: `Mandibular Incisor Position: Lower central incisor position to NB line measures ${l1NbMm} mm and ${l1NbDeg}°, confirming mandibular dentoalveolar proclination relative to the mandibular basal bone.`,
-  });
+  if (l1NbMm !== undefined && l1NbDeg !== undefined) {
+    steinerStickPoints.push({
+      id: 'st-2',
+      text: `Mandibular Incisor Position: Lower central incisor position to NB line measures ${l1NbMm} mm and ${l1NbDeg}°.`,
+    });
+  } else {
+    steinerStickPoints.push({
+      id: 'st-2',
+      text: 'Mandibular Incisor Position: Lower incisor to NB line measurements not yet recorded.',
+    });
+  }
 
-  steinerStickPoints.push({
-    id: 'st-3',
-    text: `Incisor Inclination & Interincisal Angle: The interincisal angle is acutely reduced at ${iiAngle}° (Norm: 131°), confirming bimaxillary dentoalveolar protrusion.`,
-  });
-
-  steinerStickPoints.push({
-    id: 'st-4',
-    text: 'Dentoalveolar Compensation: Proclination of mandibular incisors serves as a dentoalveolar compensation for underlying mandibular retrognathism.',
-  });
-
-  steinerStickPoints.push({
-    id: 'st-5',
-    text: "Lip Support & Soft Tissue Profile: Both upper and lower lips project anterior to Steiner's S-Line, resulting directly from the underlying dentoalveolar protrusion.",
-  });
-
-  steinerStickPoints.push({
-    id: 'st-6',
-    text: 'Clinical Implication for Treatment Planning: Extraction of first premolars is clinically indicated to facilitate controlled incisor retraction, relieve crowding, and achieve lip competence.',
-  });
+  if (iiAngle !== undefined) {
+    steinerStickPoints.push({
+      id: 'st-3',
+      text: `Incisor Inclination & Interincisal Angle: The interincisal angle measures ${iiAngle}° (Norm: 131°).`,
+    });
+  } else {
+    steinerStickPoints.push({
+      id: 'st-3',
+      text: 'Incisor Inclination: Interincisal angle not yet recorded.',
+    });
+  }
 
   // --- 8. MODEL ANALYSIS SUMMARY ---
   const modelPoints: DiagnosisPointItem[] = [];
   const model: Partial<ModelAnalysisSection> = patient.modelAnalysis || {};
-
-  // Space Analysis & Arch Length Discrepancy
-  const maxAvail = model.maxillaryArchLengthAvailable || '';
-  const mandAvail = model.mandibularArchLengthAvailable || '';
   const tw = model.toothWidths || {};
 
-  // Compute tooth sums if available
-  let maxSum = 0;
-  ['11', '12', '13', '14', '15', '16', '21', '22', '23', '24', '25', '26'].forEach((t) => {
-    if (typeof tw[t] === 'number') maxSum += tw[t];
-  });
+  const careyLower = calculateCarey(tw, model.mandibularArchLengthAvailable ?? '');
+  const nanceUpper = calculateNanceMaxillary(tw, model.maxillaryArchLengthAvailable ?? '');
+  const bolton = calculateBolton(tw);
+  const ashleyHowe = calculateAshleyHowe(model.premolarBasalArchWidth || '', tw);
 
-  let mandSum = 0;
-  ['31', '32', '33', '34', '35', '36', '41', '42', '43', '44', '45', '46'].forEach((t) => {
-    if (typeof tw[t] === 'number') mandSum += tw[t];
-  });
-
-  if (maxAvail !== '' && maxSum > 0) {
-    const diff = Number(maxAvail) - maxSum;
+  if (nanceUpper.discrepancy !== null) {
     modelPoints.push({
       id: 'ma-1',
-      text: `Maxillary Space Analysis: Available arch perimeter measures ${maxAvail} mm against a required tooth material length of ${maxSum.toFixed(1)} mm, yielding a net arch length discrepancy of ${diff >= 0 ? '+' : ''}${diff.toFixed(1)} mm (${diff < 0 ? 'crowding' : 'spacing'}).`,
+      text: `Maxillary Arch Perimeter (Nance): Available arch length of ${model.maxillaryArchLengthAvailable} mm vs tooth material of ${nanceUpper.totalToothMaterial.toFixed(1)} mm yields a discrepancy of ${nanceUpper.discrepancy > 0 ? '+' : ''}${nanceUpper.discrepancy.toFixed(1)} mm (${nanceUpper.inference}).`,
     });
   } else {
     modelPoints.push({
       id: 'ma-1',
-      text: 'Maxillary Arch Length Discrepancy: Model analysis demonstrates a moderate arch length deficit (-4.0 mm to -5.5 mm crowding) in the maxillary anterior segment.',
+      text: `Maxillary Arch Perimeter Analysis: ${nanceUpper.inference}.`,
     });
   }
 
-  if (mandAvail !== '' && mandSum > 0) {
-    const diff = Number(mandAvail) - mandSum;
+  if (careyLower.discrepancy !== null) {
     modelPoints.push({
       id: 'ma-2',
-      text: `Mandibular Space Analysis: Available arch perimeter measures ${mandAvail} mm against a required tooth material length of ${mandSum.toFixed(1)} mm, yielding a net arch length discrepancy of ${diff >= 0 ? '+' : ''}${diff.toFixed(1)} mm (${diff < 0 ? 'crowding' : 'spacing'}).`,
+      text: `Mandibular Arch Perimeter (Carey): Available arch length of ${model.mandibularArchLengthAvailable} mm vs tooth material of ${careyLower.totalToothMaterial.toFixed(1)} mm yields a discrepancy of ${careyLower.discrepancy > 0 ? '+' : ''}${careyLower.discrepancy.toFixed(1)} mm (${careyLower.inference}).`,
     });
   } else {
     modelPoints.push({
       id: 'ma-2',
-      text: 'Mandibular Arch Length Discrepancy: Model analysis demonstrates an arch length deficit (-3.5 mm to -4.5 mm crowding) in the mandibular anterior segment.',
+      text: `Mandibular Arch Perimeter Analysis: ${careyLower.inference}.`,
     });
   }
 
-  // Bolton Analysis
-  if (maxSum > 0 && mandSum > 0) {
-    const overallRatio = (mandSum / maxSum) * 100;
+  if (bolton.overallRatio !== null) {
     modelPoints.push({
       id: 'ma-3',
-      text: `Bolton's Tooth Size Discrepancy: Calculated overall Bolton ratio is ${overallRatio.toFixed(1)}% (Norm: 91.3% ± 0.26%), indicating ${overallRatio > 91.5 ? 'mandibular tooth material excess' : 'maxillary tooth material excess'}.`,
+      text: `Bolton's Tooth Ratio: Overall ratio is ${bolton.overallRatio.toFixed(1)}% (Norm: 91.3%) and Anterior ratio is ${bolton.anteriorRatio !== null ? bolton.anteriorRatio.toFixed(1) + '%' : '—'} (Norm: 77.2%) (${bolton.overallInference}).`,
     });
   } else {
     modelPoints.push({
       id: 'ma-3',
-      text: "Bolton's Analysis: Tooth size ratios are within normal limits (Overall ratio ~91.3%, Anterior ratio ~77.2%) with no major tooth material discrepancy.",
+      text: `Bolton's Tooth Ratio Analysis: ${bolton.overallInference}.`,
     });
   }
 
-  // Arch Width & Basal Width
-  const measuredPremolarWidth = sumPontsPremolarWidth44(tw);
-  if (model.premolarBasalArchWidth || measuredPremolarWidth > 0) {
+  if (ashleyHowe.pmbaRatio !== null) {
     modelPoints.push({
       id: 'ma-4',
-      text: `Arch Width & Basal Arch Analysis: Measured Premolar Width is ${measuredPremolarWidth > 0 ? measuredPremolarWidth.toFixed(1) : model.measuredPremolarWidth || 36} mm, Basal Arch Width is ${model.premolarBasalArchWidth || 42} mm (Ashley Howe ratio confirms adequate apical basal bone support).`,
+      text: `Ashley-Howe Basal Arch Analysis: PMBA W% is ${ashleyHowe.pmbaRatio.toFixed(1)}% (Norm: > 44%) (${ashleyHowe.inference}).`,
     });
   } else {
     modelPoints.push({
       id: 'ma-4',
-      text: "Pont's & Ashley Howe's Analysis: Apical basal bone width is adequate to support tooth movement within the sound cortical plates.",
+      text: `Ashley-Howe Basal Arch Analysis: ${ashleyHowe.inference}.`,
     });
+  }
+
+  const isMixedDentition = patient.modelAnalysis?.dentitionType === 'Mixed Dentition' ||
+    (typeof patient.age === 'number' && patient.age > 0 && patient.age <= 12 && patient.modelAnalysis?.dentitionType !== 'Permanent Dentition');
+
+  if (isMixedDentition) {
+    const tanaka = calculateTanakaJohnston(tw);
+    if (tanaka.hasAll4MandibularIncisors) {
+      modelPoints.push({
+        id: 'ma-5',
+        text: `Tanaka-Johnston Mixed Dentition Analysis: ${tanaka.inference}.`,
+      });
+    }
   }
 
   // --- 9. BONWILL-HAWLEY TRIANGLE DIAGNOSIS ---
   const bonwillPoints: DiagnosisPointItem[] = [];
+  const sumAnteriors = sumAnterior6FromFdi(tw, 'maxillary');
 
-  // Sum of Anteriors (13-23)
-  const sumAnteriors = (typeof tw['11'] === 'number' && typeof tw['12'] === 'number' && typeof tw['13'] === 'number' && typeof tw['21'] === 'number' && typeof tw['22'] === 'number' && typeof tw['23'] === 'number')
-    ? (tw['11'] + tw['12'] + tw['13'] + tw['21'] + tw['22'] + tw['23'])
-    : 42.0;
-
-  const idealIntercanine = (sumAnteriors / 3) + 6.0;
-  const idealIntermolar = sumAnteriors + 6.0;
-
-  bonwillPoints.push({
-    id: 'bh-1',
-    text: `Ideal Arch Geometry: Calculated Sum of Anteriors (13 to 23) measures ${sumAnteriors.toFixed(1)} mm, establishing a Bonwill Equilateral Triangle side length of approximately 100.0 mm.`,
-  });
-
-  bonwillPoints.push({
-    id: 'bh-2',
-    text: `Arch Form & Symmetry: Pre-formed Hawley arch geometry confirms an ideal ${model.maxillaryArchShape || 'Ovoid'} arch template with bilateral quadrant symmetry across the mid-palatal suture.`,
-  });
-
-  bonwillPoints.push({
-    id: 'bh-3',
-    text: `Calculated Target Dimensions: Computed ideal intercanine width target is ${idealIntercanine.toFixed(1)} mm and ideal intermolar width target is ${idealIntermolar.toFixed(1)} mm.`,
-  });
-
-  bonwillPoints.push({
-    id: 'bh-4',
-    text: `Arch Perimeter & Depth: Target arch perimeter measures ${(sumAnteriors * 2.1).toFixed(1)} mm with an anterior arc radius of R = ${(sumAnteriors / 3 + 3).toFixed(1)} mm.`,
-  });
-
-  bonwillPoints.push({
-    id: 'bh-5',
-    text: 'Clinical Implication for Custom Wire Design: Custom pre-formed archwire templates (Ovoid form) must be selected to preserve individual intercanine width and prevent post-treatment relapse.',
-  });
+  if (sumAnteriors > 0) {
+    const idealIntercanine = (sumAnteriors / 3) + 6.0;
+    const idealIntermolar = sumAnteriors + 6.0;
+    bonwillPoints.push({
+      id: 'bh-1',
+      text: `Ideal Arch Geometry: Calculated Sum of Anteriors (13 to 23) measures ${sumAnteriors.toFixed(1)} mm, establishing a Bonwill Equilateral Triangle side length of approximately 100.0 mm.`,
+    });
+    bonwillPoints.push({
+      id: 'bh-2',
+      text: `Calculated Target Dimensions: Computed ideal intercanine width target is ${idealIntercanine.toFixed(1)} mm and ideal intermolar width target is ${idealIntermolar.toFixed(1)} mm.`,
+    });
+    bonwillPoints.push({
+      id: 'bh-3',
+      text: `Arch Perimeter & Depth: Target arch perimeter measures ${(sumAnteriors * 2.1).toFixed(1)} mm with an anterior arc radius of R = ${(sumAnteriors / 3 + 3).toFixed(1)} mm.`,
+    });
+  } else {
+    bonwillPoints.push({
+      id: 'bh-1',
+      text: 'Ideal Arch Geometry: Enter maxillary anterior tooth widths (13 to 23) to compute customized Bonwill-Hawley arch dimensions.',
+    });
+  }
 
   // --- 10. RADIOGRAPHIC DIAGNOSIS ---
   const radPoints: DiagnosisPointItem[] = [];

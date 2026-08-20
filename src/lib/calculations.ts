@@ -31,9 +31,28 @@ export interface PontsResult {
 }
 
 export interface AshleyHoweResult {
+  totalToothMaterial: number;
   pmbaRatio: number | null;
   inference: string;
   badgeColor: 'green' | 'amber' | 'red';
+}
+
+export interface NanceMaxillaryResult {
+  totalToothMaterial: number;
+  discrepancy: number | null;
+  inference: string;
+  badgeColor: 'green' | 'amber' | 'red';
+}
+
+export interface TanakaJohnstonResult {
+  mandibularIncisorSum: number;
+  hasAll4MandibularIncisors: boolean;
+  predictedMaxillaryCpmPerQuadrant: number | null; // (Sum / 2) + 10.5 mm
+  predictedMandibularCpmPerQuadrant: number | null; // (Sum / 2) + 10.0 mm
+  predictedMaxillaryTotal: number | null;
+  predictedMandibularTotal: number | null;
+  inference: string;
+  badgeColor: 'green' | 'amber' | 'blue';
 }
 
 function getToothWidthMm(toothWidths: Record<string, number | ''>, tooth: string): number {
@@ -233,6 +252,68 @@ export function calculateCarey(
   }
 }
 
+/**
+ * Nance's Maxillary Arch Perimeter Analysis (15 to 25 vs Available Maxillary Arch Length)
+ */
+export function calculateNanceMaxillary(
+  toothWidths: Record<string, number | ''>,
+  maxillaryArchLengthAvailable: number | ''
+): NanceMaxillaryResult {
+  const totalToothMaterial = sumMaxillaryArchToothMaterial(toothWidths);
+
+  const hasArchLength =
+    typeof maxillaryArchLengthAvailable === 'number' &&
+    !isNaN(maxillaryArchLengthAvailable) &&
+    maxillaryArchLengthAvailable > 0;
+  const hasAll10MaxillaryTeeth = NANCE_MAXILLARY_TEETH.every((t) => getToothWidthMm(toothWidths, t) > 0);
+
+  if (!hasArchLength || !hasAll10MaxillaryTeeth) {
+    let inference = 'Enter Maxillary Arch Length Available and all 10 Tooth Widths (15 to 25)';
+    if (!hasArchLength && hasAll10MaxillaryTeeth) {
+      inference = 'Enter Maxillary Arch Length Available';
+    } else if (hasArchLength && !hasAll10MaxillaryTeeth) {
+      inference = 'Enter all 10 Maxillary Tooth Widths (15 to 25)';
+    }
+
+    return {
+      totalToothMaterial,
+      discrepancy: null,
+      inference,
+      badgeColor: 'amber',
+    };
+  }
+
+  const discrepancy = maxillaryArchLengthAvailable - totalToothMaterial;
+
+  if (Math.abs(discrepancy) < 0.2) {
+    return {
+      totalToothMaterial,
+      discrepancy,
+      inference: 'Normal Maxillary Arch Perimeter (Balanced Arch Length)',
+      badgeColor: 'green',
+    };
+  } else if (discrepancy < 0) {
+    const deficit = Math.abs(discrepancy);
+    return {
+      totalToothMaterial,
+      discrepancy,
+      inference: deficit > 5.0
+        ? `Maxillary Arch Length Deficiency of ${deficit.toFixed(1)} mm (> 5mm: Space creation required)`
+        : deficit >= 2.5
+        ? `Maxillary Arch Length Deficiency of ${deficit.toFixed(1)} mm (2.5-5mm: Borderline / Expansion or Stripping)`
+        : `Mild Maxillary Arch Length Deficiency of ${deficit.toFixed(1)} mm (< 2.5mm: Non-Extraction / Proximal Stripping)`,
+      badgeColor: deficit > 5.0 ? 'red' : 'amber',
+    };
+  } else {
+    return {
+      totalToothMaterial,
+      discrepancy,
+      inference: `Maxillary Arch Length Excess of ${discrepancy.toFixed(1)} mm (Spacing Present)`,
+      badgeColor: 'amber',
+    };
+  }
+}
+
 /** Maxillary premolars summed for Pont's 4-4 crown reference (14, 15, 24, 25). */
 export const PONTS_PM_44_TEETH = ['14', '15', '24', '25'] as const;
 export const PONTS_M_66_TEETH = ['16', '17', '26', '27'] as const;
@@ -335,20 +416,48 @@ export function calculatePonts(
   };
 }
 
+/**
+ * Ashley-Howe Analysis:
+ * - Total Tooth Material (TTM) = Mesiodistal sum of 12 maxillary teeth (16 to 26)
+ * - Premolar Basal Arch Width (PMBAW) = Canine fossa to canine fossa at premolar apex level
+ * - PMBA W% = (PMBAW / TTM) * 100
+ * Norms:
+ * - < 37%: Basal arch deficiency (Extraction indicated)
+ * - 37% - 44%: Borderline (Expansion / Non-extraction possible)
+ * - > 44%: Broad basal arch (Non-extraction indicated)
+ */
 export function calculateAshleyHowe(
   pmbaWidth: number | '',
-  totalToothMaterial: number | ''
+  toothWidthsOrTtm: Record<string, number | ''> | number | ''
 ): AshleyHoweResult {
-  if (
-    typeof pmbaWidth !== 'number' ||
-    isNaN(pmbaWidth) ||
-    typeof totalToothMaterial !== 'number' ||
-    isNaN(totalToothMaterial) ||
-    totalToothMaterial === 0
-  ) {
+  let totalToothMaterial = 0;
+  let hasAll12Teeth = false;
+
+  if (typeof toothWidthsOrTtm === 'number') {
+    totalToothMaterial = !isNaN(toothWidthsOrTtm) && toothWidthsOrTtm > 0 ? toothWidthsOrTtm : 0;
+    hasAll12Teeth = totalToothMaterial > 0;
+  } else if (toothWidthsOrTtm && typeof toothWidthsOrTtm === 'object') {
+    totalToothMaterial = BOLTON_MAXILLARY_12_FDI.reduce(
+      (sum, tooth) => sum + getToothWidthMm(toothWidthsOrTtm, tooth),
+      0
+    );
+    hasAll12Teeth = BOLTON_MAXILLARY_12_FDI.every((t) => getToothWidthMm(toothWidthsOrTtm, t) > 0);
+  }
+
+  const hasPmba = typeof pmbaWidth === 'number' && !isNaN(pmbaWidth) && pmbaWidth > 0;
+
+  if (!hasPmba || !hasAll12Teeth || totalToothMaterial === 0) {
+    let inference = 'Enter Premolar Basal Arch Width (PMBAW) and all 12 Maxillary Tooth Widths (16–26)';
+    if (!hasPmba && hasAll12Teeth) {
+      inference = 'Enter Premolar Basal Arch Width (PMBAW)';
+    } else if (hasPmba && !hasAll12Teeth) {
+      inference = 'Enter all 12 Maxillary Tooth Widths (16–26)';
+    }
+
     return {
+      totalToothMaterial,
       pmbaRatio: null,
-      inference: 'Enter Premolar Basal Arch Width (PMBAW) and Total Tooth Material (TTM)',
+      inference,
       badgeColor: 'amber',
     };
   }
@@ -357,21 +466,77 @@ export function calculateAshleyHowe(
 
   if (pmbaRatio < 37) {
     return {
+      totalToothMaterial,
       pmbaRatio,
       inference: `PMBA W% = ${pmbaRatio.toFixed(1)}% (< 37%): Basal arch deficiency — Extraction indicated (Basal bone cannot accommodate tooth material)`,
       badgeColor: 'red',
     };
   } else if (pmbaRatio >= 37 && pmbaRatio <= 44) {
     return {
+      totalToothMaterial,
       pmbaRatio,
       inference: `PMBA W% = ${pmbaRatio.toFixed(1)}% (37%-44%): Borderline Case — Arch expansion or non-extraction possible with careful monitoring`,
       badgeColor: 'amber',
     };
   } else {
     return {
+      totalToothMaterial,
       pmbaRatio,
       inference: `PMBA W% = ${pmbaRatio.toFixed(1)}% (> 44%): Broad basal arch — Non-extraction treatment indicated`,
       badgeColor: 'green',
     };
   }
 }
+
+/**
+ * Tanaka-Johnston Mixed Dentition Space Analysis:
+ * Predicts unerupted canine and premolar (3, 4, 5) mesiodistal tooth widths per quadrant
+ * from the sum of the 4 erupted mandibular incisors (31, 32, 41, 42).
+ *
+ * Formulas:
+ * - Predicted Maxillary Canine & Premolars (per quadrant) = (Sum of 4 Mandibular Incisors / 2) + 10.5 mm (75% confidence)
+ * - Predicted Mandibular Canine & Premolars (per quadrant) = (Sum of 4 Mandibular Incisors / 2) + 10.0 mm (75% confidence)
+ */
+export const MANDIBULAR_4_INCISORS = ['42', '41', '31', '32'] as const;
+
+export function sumMandibular4Incisors(toothWidths: Record<string, number | ''>): number {
+  return MANDIBULAR_4_INCISORS.reduce((sum, tooth) => sum + getToothWidthMm(toothWidths, tooth), 0);
+}
+
+export function calculateTanakaJohnston(toothWidths: Record<string, number | ''>): TanakaJohnstonResult {
+  const mandibularIncisorSum = sumMandibular4Incisors(toothWidths);
+  const hasAll4 = MANDIBULAR_4_INCISORS.every((t) => getToothWidthMm(toothWidths, t) > 0);
+
+  if (!hasAll4 || mandibularIncisorSum === 0) {
+    return {
+      mandibularIncisorSum,
+      hasAll4MandibularIncisors: false,
+      predictedMaxillaryCpmPerQuadrant: null,
+      predictedMandibularCpmPerQuadrant: null,
+      predictedMaxillaryTotal: null,
+      predictedMandibularTotal: null,
+      inference: 'Enter widths of all 4 mandibular incisors (31, 32, 41, 42) to predict unerupted canine & premolar space',
+      badgeColor: 'amber',
+    };
+  }
+
+  const halfSum = mandibularIncisorSum / 2;
+  const predictedMaxillaryCpmPerQuadrant = halfSum + 10.5;
+  const predictedMandibularCpmPerQuadrant = halfSum + 10.0;
+  const predictedMaxillaryTotal = predictedMaxillaryCpmPerQuadrant * 2;
+  const predictedMandibularTotal = predictedMandibularCpmPerQuadrant * 2;
+
+  const inference = `Predicted Canine-Premolar (3-4-5) Space: Upper = ${predictedMaxillaryCpmPerQuadrant.toFixed(1)} mm/quadrant (${predictedMaxillaryTotal.toFixed(1)} mm total) | Lower = ${predictedMandibularCpmPerQuadrant.toFixed(1)} mm/quadrant (${predictedMandibularTotal.toFixed(1)} mm total)`;
+
+  return {
+    mandibularIncisorSum,
+    hasAll4MandibularIncisors: true,
+    predictedMaxillaryCpmPerQuadrant,
+    predictedMandibularCpmPerQuadrant,
+    predictedMaxillaryTotal,
+    predictedMandibularTotal,
+    inference,
+    badgeColor: 'blue',
+  };
+}
+

@@ -94,3 +94,62 @@ export function readUploadedFile(file: File): Promise<string> {
     reader.readAsText(file);
   });
 }
+
+/**
+ * Batch exports all patient cases into a single zipped encrypted vault (.zip).
+ * Inside the archive:
+ * - Each patient case is encrypted as an individual AES-GCM-256 .orthocase payload
+ * - A master department manifest metadata file is included
+ */
+export async function exportAllCasesToEncryptedZip(
+  patients: import('../types').PatientRecord[],
+  passphrase?: string
+): Promise<boolean> {
+  const JSZip = (await import('jszip')).default;
+  const { encryptDataToVault } = await import('./cryptoVault');
+
+  const zip = new JSZip();
+  const dateStr = new Date().toISOString().split('T')[0];
+  const pw = passphrase || 'orthocase-department-vault-2026';
+
+  const casesFolder = zip.folder('encrypted_cases');
+
+  for (const patient of patients) {
+    const safeName = (patient.name || 'Patient').replace(/[^a-zA-Z0-9]/g, '_');
+    const safeId = (patient.patientId || patient.id).replace(/[^a-zA-Z0-9]/g, '_');
+    const encryptedPayload = await encryptDataToVault(patient, pw);
+    casesFolder?.file(`${safeId}_${safeName}.orthocase`, JSON.stringify(encryptedPayload, null, 2));
+  }
+
+  const manifest = {
+    exportDate: new Date().toISOString(),
+    totalCases: patients.length,
+    appVersion: '2.0.0',
+    caseIndex: patients.map((p) => ({
+      id: p.id,
+      patientId: p.patientId,
+      name: p.name,
+      updatedAt: p.updatedAt,
+      completionPercentage: p.completionStatus?.overallPercentage || 0,
+      approvalStatus: p.approvalStatus || 'DRAFT',
+    })),
+  };
+  zip.file('department_cases_manifest.json', JSON.stringify(manifest, null, 2));
+
+  const content = await zip.generateAsync({ type: 'blob' });
+  const filename = `OrthoCase_Department_Vault_${dateStr}.zip`;
+
+  const url = URL.createObjectURL(content);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.style.display = 'none';
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => {
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }, 1000);
+
+  return true;
+}

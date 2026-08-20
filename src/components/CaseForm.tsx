@@ -501,6 +501,9 @@ export const CaseForm: React.FC<CaseFormProps> = ({ initialPatient, onSavePatien
   const [images, setImages] = useState<InvestigationImage[]>(initialPatient?.investigations?.images || []);
 
   // TAB 6: Model Analysis
+  const [dentitionType, setDentitionType] = useState<'Permanent Dentition' | 'Mixed Dentition'>(
+    initialPatient?.modelAnalysis?.dentitionType || 'Permanent Dentition'
+  );
   const [maxillaryArchShape, setMaxillaryArchShape] = useState<ArchShape>(initialPatient?.modelAnalysis?.maxillaryArchShape || 'U-shaped');
   const [mandibularArchShape, setMandibularArchShape] = useState<ArchShape>(initialPatient?.modelAnalysis?.mandibularArchShape || 'U-shaped');
   const [archAlignment, setArchAlignment] = useState<ArchAlignment>(initialPatient?.modelAnalysis?.archAlignment || 'Crowding');
@@ -707,6 +710,7 @@ export const CaseForm: React.FC<CaseFormProps> = ({ initialPatient, onSavePatien
       },
       snFhCorrectionAnalysis,
       modelAnalysis: {
+        dentitionType,
         maxillaryArchShape,
         mandibularArchShape,
         archSymmetry: symmetry,
@@ -1371,6 +1375,8 @@ export const CaseForm: React.FC<CaseFormProps> = ({ initialPatient, onSavePatien
 
         {activeTab === 'modelAnalysis' && (
           <TabModelAnalysis
+            dentitionType={dentitionType}
+            setDentitionType={setDentitionType}
             maxillaryArchShape={maxillaryArchShape}
             setMaxillaryArchShape={setMaxillaryArchShape}
             mandibularArchShape={mandibularArchShape}

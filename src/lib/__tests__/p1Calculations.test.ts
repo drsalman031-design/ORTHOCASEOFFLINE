@@ -2,6 +2,9 @@ import {
   calculateBolton,
   calculatePonts,
   calculateCarey,
+  calculateNanceMaxillary,
+  calculateAshleyHowe,
+  calculateTanakaJohnston,
 } from '../calculations';
 import { autoGenerateAllCephAnalyses } from '../../components/case-form/landmark-id/autoAnalysisGenerator';
 import {
@@ -374,6 +377,176 @@ export function runP1Tests() {
     assert(
       res5.discrepancy === null,
       'P1-06.6: Zero arch length available yields null discrepancy'
+    );
+  }
+
+  // -------------------------------------------------------------
+  // [P1-07] Ashley-Howe Analysis Input Validation & PMBA Ratio
+  // -------------------------------------------------------------
+  console.log('\n--- [P1-07] Ashley-Howe Analysis Input Validation ---');
+  {
+    const full12MaxTeeth: Record<string, number> = {
+      '16': 10.0, '15': 7.0, '14': 7.0, '13': 7.5, '12': 6.5, '11': 8.5,
+      '21': 8.5, '22': 6.5, '23': 7.5, '24': 7.0, '25': 7.0, '26': 10.0,
+    }; // Total Tooth Material (TTM) = 93.0 mm
+
+    // 1. Complete 12 teeth with PMBAW = 42.0 mm -> PMBA% = (42 / 93) * 100 = 45.16% (> 44% -> Broad arch / Non-extraction)
+    const res1 = calculateAshleyHowe(42.0, full12MaxTeeth);
+    assert(
+      res1.pmbaRatio !== null && Math.abs(res1.pmbaRatio - 45.16) < 0.1,
+      'P1-07.1: Complete 12 teeth calculates exact PMBA ratio (45.2%)',
+      `Got pmbaRatio=${res1.pmbaRatio}`
+    );
+    assert(
+      res1.badgeColor === 'green' && res1.inference.includes('Broad basal arch'),
+      'P1-07.2: Broad basal arch indicates Non-extraction treatment'
+    );
+
+    // 2. Borderline Case (37% - 44%) -> PMBAW = 38.0 mm -> PMBA% = (38 / 93) * 100 = 40.86%
+    const res2 = calculateAshleyHowe(38.0, full12MaxTeeth);
+    assert(
+      res2.pmbaRatio !== null && res2.badgeColor === 'amber' && res2.inference.includes('Borderline Case'),
+      'P1-07.3: PMBA 37-44% correctly flagged as Borderline'
+    );
+
+    // 3. Basal Deficiency (< 37%) -> PMBAW = 32.0 mm -> PMBA% = (32 / 93) * 100 = 34.4%
+    const res3 = calculateAshleyHowe(32.0, full12MaxTeeth);
+    assert(
+      res3.pmbaRatio !== null && res3.badgeColor === 'red' && res3.inference.includes('Extraction indicated'),
+      'P1-07.4: PMBA < 37% correctly flags Basal arch deficiency (Extraction indicated)'
+    );
+
+    // 4. Missing tooth (e.g. missing 16) -> should return null
+    const missing16 = { ...full12MaxTeeth };
+    delete missing16['16'];
+    const res4 = calculateAshleyHowe(42.0, missing16);
+    assert(
+      res4.pmbaRatio === null,
+      'P1-07.5: Missing 16 yields null PMBA ratio',
+      `Got pmbaRatio=${res4.pmbaRatio}`
+    );
+    assert(
+      res4.inference.includes('Enter all 12 Maxillary Tooth Widths (16–26)'),
+      'P1-07.6: Informs user to enter all 12 maxillary teeth'
+    );
+
+    // 5. Missing PMBAW
+    const res5 = calculateAshleyHowe('', full12MaxTeeth);
+    assert(
+      res5.pmbaRatio === null,
+      'P1-07.7: Missing PMBAW yields null PMBA ratio'
+    );
+
+    // 6. Zero PMBAW
+    const res6 = calculateAshleyHowe(0, full12MaxTeeth);
+    assert(
+      res6.pmbaRatio === null,
+      'P1-07.8: Zero PMBAW yields null PMBA ratio'
+    );
+  }
+
+  // -------------------------------------------------------------
+  // [P1-08] Maxillary Arch Perimeter Analysis (Nance)
+  // -------------------------------------------------------------
+  console.log('\n--- [P1-08] Nance Maxillary Arch Perimeter Analysis ---');
+  {
+    const full10MaxTeeth: Record<string, number> = {
+      '15': 7.0, '14': 7.0, '13': 7.5, '12': 6.5, '11': 8.5,
+      '21': 8.5, '22': 6.5, '23': 7.5, '24': 7.0, '25': 7.0,
+    }; // Total Tooth Material (15-25) = 73.0 mm
+
+    // 1. Complete teeth with Arch Length = 75.0 mm -> Discrepancy = +2.0 mm (Excess / Spacing)
+    const res1 = calculateNanceMaxillary(full10MaxTeeth, 75.0);
+    assert(
+      res1.discrepancy !== null && Math.abs(res1.discrepancy - 2.0) < 0.1,
+      'P1-08.1: Maxillary Arch Perimeter calculates +2.0 mm excess',
+      `Got discrepancy=${res1.discrepancy}`
+    );
+    assert(
+      res1.totalToothMaterial === 73.0,
+      'P1-08.2: Maxillary Tooth Material (15-25) sums correctly to 73.0 mm'
+    );
+
+    // 2. Severe Deficiency: Arch Length = 65.0 mm -> Discrepancy = -8.0 mm
+    const res2 = calculateNanceMaxillary(full10MaxTeeth, 65.0);
+    assert(
+      res2.discrepancy !== null && Math.abs(res2.discrepancy - (-8.0)) < 0.1 && res2.badgeColor === 'red',
+      'P1-08.3: Maxillary deficiency > 5mm flagged as severe (red badge)'
+    );
+
+    // 3. Incomplete Maxillary Teeth (missing 25)
+    const missing25 = { ...full10MaxTeeth };
+    delete missing25['25'];
+    const res3 = calculateNanceMaxillary(missing25, 75.0);
+    assert(
+      res3.discrepancy === null,
+      'P1-08.4: Missing 25 yields null discrepancy'
+    );
+    assert(
+      res3.inference.includes('Enter all 10 Maxillary Tooth Widths (15 to 25)'),
+      'P1-08.5: Informs user to enter all 10 maxillary teeth (15 to 25)'
+    );
+
+    // 4. Missing Arch Length Available
+    const res4 = calculateNanceMaxillary(full10MaxTeeth, '');
+    assert(
+      res4.discrepancy === null,
+      'P1-08.6: Missing maxillary arch length available yields null discrepancy'
+    );
+  }
+
+  // -------------------------------------------------------------
+  // P1-09: TANAKA-JOHNSTON MIXED DENTITION PREDICTION
+  // -------------------------------------------------------------
+  console.log('\n--- [P1-09] Tanaka-Johnston Mixed Dentition Analysis ---');
+  {
+    // Mandibular 4 incisors: 42 (6.0), 41 (5.5), 31 (5.5), 32 (6.0) -> Sum = 23.0 mm
+    const mand4Incisors: Record<string, number | ''> = {
+      '42': 6.0,
+      '41': 5.5,
+      '31': 5.5,
+      '32': 6.0,
+    };
+
+    const res1 = calculateTanakaJohnston(mand4Incisors);
+    // Predicted Maxillary = (23.0 / 2) + 10.5 = 11.5 + 10.5 = 22.0 mm per quadrant
+    // Predicted Mandibular = (23.0 / 2) + 10.0 = 11.5 + 10.0 = 21.5 mm per quadrant
+    assert(
+      res1.hasAll4MandibularIncisors === true,
+      'P1-09.1: Validates complete 4 mandibular incisors'
+    );
+    assert(
+      res1.mandibularIncisorSum === 23.0,
+      'P1-09.2: Sums mandibular incisors correctly to 23.0 mm'
+    );
+    assert(
+      res1.predictedMaxillaryCpmPerQuadrant !== null && Math.abs(res1.predictedMaxillaryCpmPerQuadrant - 22.0) < 0.05,
+      'P1-09.3: Predicted maxillary 3-4-5 space per quadrant is 22.0 mm'
+    );
+    assert(
+      res1.predictedMandibularCpmPerQuadrant !== null && Math.abs(res1.predictedMandibularCpmPerQuadrant - 21.5) < 0.05,
+      'P1-09.4: Predicted mandibular 3-4-5 space per quadrant is 21.5 mm'
+    );
+    assert(
+      res1.predictedMaxillaryTotal !== null && Math.abs(res1.predictedMaxillaryTotal - 44.0) < 0.05,
+      'P1-09.5: Predicted total maxillary 3-4-5 space is 44.0 mm'
+    );
+    assert(
+      res1.predictedMandibularTotal !== null && Math.abs(res1.predictedMandibularTotal - 43.0) < 0.05,
+      'P1-09.6: Predicted total mandibular 3-4-5 space is 43.0 mm'
+    );
+
+    // Missing 42
+    const missing42 = { ...mand4Incisors };
+    delete missing42['42'];
+    const res2 = calculateTanakaJohnston(missing42);
+    assert(
+      res2.hasAll4MandibularIncisors === false && res2.predictedMaxillaryCpmPerQuadrant === null,
+      'P1-09.7: Missing mandibular incisor yields null predictions'
+    );
+    assert(
+      res2.inference.includes('Enter widths of all 4 mandibular incisors'),
+      'P1-09.8: Guides user to enter all 4 mandibular incisors'
     );
   }
 

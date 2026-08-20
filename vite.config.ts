@@ -50,9 +50,6 @@ export default defineConfig(() => {
             if (id.includes('/case-form/') && id.includes('Analysis')) {
               return 'ceph-analyses';
             }
-            if (id.includes('/bonwill/')) {
-              return 'tab-bonwill';
-            }
           },
         },
       },

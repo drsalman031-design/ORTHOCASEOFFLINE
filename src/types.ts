@@ -661,6 +661,7 @@ export interface Investigations {
 }
 
 export interface ModelAnalysisSection {
+  dentitionType?: 'Permanent Dentition' | 'Mixed Dentition';
   maxillaryArchShape?: ArchShape;
   mandibularArchShape?: ArchShape;
   archSymmetry?: FacialSymmetry;
@@ -726,6 +727,7 @@ export interface UserAccount {
   department: string;
   authProvider?: 'google' | 'institutional' | 'custom';
   avatarUrl?: string;
+  institutionLogoUrl?: string;
   googleSubId?: string;
   lastAuthenticatedAt?: string;
 }
@@ -1017,6 +1019,7 @@ export interface StudentProfile {
   department: string;
   academicYear: string;
   supervisorName: string;
+  institutionLogoUrl?: string;
 }
 
 export type ActiveTab = 'home' | 'patients' | 'students' | 'analytics' | 'settings' | 'form' | 'reports' | 'bonwill' | 'review';

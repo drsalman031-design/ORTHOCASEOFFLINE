@@ -30,16 +30,16 @@ export const ReportViewer: React.FC<ReportViewerProps> = ({
   const selectedPatient = patients.find((p) => p.id === selectedId);
   const deptConfig = getDepartmentConfig();
 
-  const handleDownloadSinglePDF = () => {
-    if (selectedPatient) {
+  const handleDownloadSinglePDF = async () => {
+    if (selectedPatient && !isGenerating) {
       setIsGenerating(true);
-      setTimeout(() => {
-        try {
-          generatePatientPDF(selectedPatient, profile);
-        } finally {
-          setIsGenerating(false);
-        }
-      }, 50);
+      try {
+        await generatePatientPDF(selectedPatient, profile);
+      } catch (err) {
+        console.error('Failed to generate PDF:', err);
+      } finally {
+        setIsGenerating(false);
+      }
     }
   };
 

@@ -93,7 +93,7 @@ export const BonwillHawleyGenerator = memo(function BonwillHawleyGenerator({
     setIsExportingPdf(true);
     try {
       const { exportBonwillPDF } = await import('./BonwillExport');
-      exportBonwillPDF(activeData);
+      await exportBonwillPDF(activeData);
     } finally {
       setIsExportingPdf(false);
     }
@@ -120,7 +120,7 @@ export const BonwillHawleyGenerator = memo(function BonwillHawleyGenerator({
         bracketAllowance: activeData.bracketAllowance,
       };
 
-      exportBonwillDualArchPDF(resolvedName, resolvedId, maxPayload, mandPayload);
+      await exportBonwillDualArchPDF(resolvedName, resolvedId, maxPayload, mandPayload);
     } finally {
       setIsExportingDualPdf(false);
     }

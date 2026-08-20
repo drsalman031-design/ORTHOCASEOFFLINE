@@ -1,4 +1,5 @@
 import { jsPDF } from 'jspdf';
+import { savePdfDoc, saveBlobFile } from '../../lib/fileSaveHelper';
 import { BonwillTemplateData } from '../../types';
 import { calculateHawleyGeometry, CalculatedHawleyGeometry } from './BonwillGeometry';
 
@@ -511,7 +512,10 @@ function renderHawleyPage(doc: jsPDF, data: BonwillTemplateData, pageNum: number
 /**
  * Generates True 1:1 Scale Vector PDF document using jsPDF for Hawley's Method B.
  */
-export function exportBonwillPDF(data: BonwillTemplateData) {
+/**
+ * Generates True 1:1 Scale Vector PDF document using jsPDF for Hawley's Method B.
+ */
+export async function exportBonwillPDF(data: BonwillTemplateData): Promise<void> {
   const doc = new jsPDF({
     orientation: 'portrait',
     unit: 'mm',
@@ -521,18 +525,18 @@ export function exportBonwillPDF(data: BonwillTemplateData) {
   renderHawleyPage(doc, data, 1, 1);
 
   const filename = `Hawley_MethodB_Arch_${(data.patientName || 'Case').replace(/\s+/g, '_')}_${data.archType}.pdf`;
-  doc.save(filename);
+  await savePdfDoc(doc, filename);
 }
 
 /**
  * Generates True 1:1 Scale Vector PDF document containing BOTH Maxillary & Mandibular arches.
  */
-export function exportBonwillDualArchPDF(
+export async function exportBonwillDualArchPDF(
   patientName: string,
   patientId: string,
   maxillaryData: Partial<BonwillTemplateData>,
   mandibularData: Partial<BonwillTemplateData>
-) {
+): Promise<void> {
   const doc = new jsPDF({
     orientation: 'portrait',
     unit: 'mm',
@@ -599,7 +603,7 @@ export function exportBonwillDualArchPDF(
   renderHawleyPage(doc, mandFull, 2, 2);
 
   const filename = `Hawley_MethodB_DualArch_${(patientName || 'Case').replace(/\s+/g, '_')}.pdf`;
-  doc.save(filename);
+  await savePdfDoc(doc, filename);
 }
 
 /**
@@ -672,15 +676,9 @@ export function exportBonwillSVG(data: BonwillTemplateData): string {
 /**
  * Downloads generated SVG content as a file.
  */
-export function downloadBonwillSVG(data: BonwillTemplateData) {
+export async function downloadBonwillSVG(data: BonwillTemplateData): Promise<boolean> {
   const svgContent = exportBonwillSVG(data);
   const blob = new Blob([svgContent], { type: 'image/svg+xml;charset=utf-8' });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = `Hawley_MethodB_Arch_${(data.patientName || 'Case').replace(/\s+/g, '_')}_${data.archType}.svg`;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
+  const filename = `Hawley_MethodB_Arch_${(data.patientName || 'Case').replace(/\s+/g, '_')}_${data.archType}.svg`;
+  return saveBlobFile(blob, filename, 'image/svg+xml');
 }

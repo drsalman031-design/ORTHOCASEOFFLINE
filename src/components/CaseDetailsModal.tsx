@@ -14,6 +14,7 @@ import {
   Image as ImageIcon,
   Maximize2,
   Sparkles,
+  Loader2,
 } from 'lucide-react';
 import { PatientRecord, StudentProfile } from '../types';
 import { generatePatientPDF } from '../lib/pdfGenerator';
@@ -36,6 +37,7 @@ export const CaseDetailsModal: React.FC<CaseDetailsModalProps> = ({
 }) => {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<boolean>(false);
+  const [isDownloadingPdf, setIsDownloadingPdf] = useState<boolean>(false);
 
   const score = patient.completionStatus?.overallPercentage || 0;
   const cc = patient.chiefComplaint || {};
@@ -48,8 +50,16 @@ export const CaseDetailsModal: React.FC<CaseDetailsModalProps> = ({
   const inv = patient.investigations || {};
   const dp = patient.diagnosisAndPlan || {};
 
-  const handleDownloadPDF = () => {
-    generatePatientPDF(patient, profile);
+  const handleDownloadPDF = async () => {
+    if (isDownloadingPdf) return;
+    setIsDownloadingPdf(true);
+    try {
+      await generatePatientPDF(patient, profile);
+    } catch (err) {
+      console.error('Failed to generate/download patient PDF:', err);
+    } finally {
+      setIsDownloadingPdf(false);
+    }
   };
 
   return (
@@ -77,11 +87,16 @@ export const CaseDetailsModal: React.FC<CaseDetailsModalProps> = ({
           <div className="flex items-center gap-1.5 shrink-0">
             <button
               onClick={handleDownloadPDF}
-              className="touch-target flex items-center justify-center gap-1 bg-teal-600 active:bg-teal-500 text-white px-3 rounded-xl text-meta font-bold shadow-xs cursor-pointer"
+              disabled={isDownloadingPdf}
+              className="touch-target flex items-center justify-center gap-1 bg-teal-600 active:bg-teal-500 disabled:opacity-60 disabled:cursor-not-allowed text-white px-3 rounded-xl text-meta font-bold shadow-xs cursor-pointer"
               title="Download Full Patient PDF Case History"
             >
-              <FileText className="w-3.5 h-3.5" />
-              <span>PDF</span>
+              {isDownloadingPdf ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <FileText className="w-3.5 h-3.5" />
+              )}
+              <span>{isDownloadingPdf ? '...' : 'PDF'}</span>
             </button>
 
             <button
@@ -397,10 +412,15 @@ export const CaseDetailsModal: React.FC<CaseDetailsModalProps> = ({
 
           <button
             onClick={handleDownloadPDF}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-teal-600 hover:bg-teal-500 text-white text-meta font-bold shadow-md cursor-pointer"
+            disabled={isDownloadingPdf}
+            className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-teal-600 hover:bg-teal-500 disabled:opacity-60 disabled:cursor-not-allowed text-white text-meta font-bold shadow-md cursor-pointer"
           >
-            <FileText className="w-4 h-4" />
-            Download Case PDF
+            {isDownloadingPdf ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <FileText className="w-4 h-4" />
+            )}
+            {isDownloadingPdf ? 'Generating PDF...' : 'Download Case PDF'}
           </button>
         </div>
       </div>

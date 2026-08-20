@@ -181,8 +181,8 @@ async function runSecurityAdversarialAudit() {
   assert(tamperThrew, 'Tampered ciphertext strictly rejected by GCM Auth Tag / Checksum');
 
   // Legitimate recovery
-  const recovered = await decryptDataFromVault(encryptedVault, password);
-  assert(recovered.patientName === 'Confidential Patient', 'Legitimate password successfully recovers exact data');
+  const recovered = (await decryptDataFromVault(encryptedVault, password)) as any;
+  assert(recovered?.patientName === 'Confidential Patient', 'Legitimate password successfully recovers exact data');
 
   // -----------------------------------------------------------------
   // 3. EXPLICIT LOGOUT & SESSION INVALIDATION

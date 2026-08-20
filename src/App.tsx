@@ -459,7 +459,7 @@ export default function App() {
 
   const handleGeneratePDF = useCallback(async (patient: PatientRecord) => {
     const { generatePatientPDF } = await import('./lib/pdfGenerator');
-    generatePatientPDF(patient, profile);
+    await generatePatientPDF(patient, profile);
   }, [profile]);
 
   const isFormMode = activeTab === 'form';

@@ -1,4 +1,5 @@
 import { jsPDF } from 'jspdf';
+import { savePdfDoc } from './fileSaveHelper';
 import {
   PatientRecord,
   StudentProfile,
@@ -4451,8 +4452,8 @@ export function buildPatientPDFDoc(patient: PatientRecord, profile: StudentProfi
   return doc;
 }
 
-export function generatePatientPDF(patient: PatientRecord, profile: StudentProfile): void {
+export async function generatePatientPDF(patient: PatientRecord, profile: StudentProfile): Promise<void> {
   const doc = buildPatientPDFDoc(patient, profile);
   const fileName = `${patient.patientId || 'Case'}_${patient.name.replace(/\s+/g, '_')}_Orthodontic_Presentation.pdf`;
-  doc.save(fileName);
+  await savePdfDoc(doc, fileName);
 }

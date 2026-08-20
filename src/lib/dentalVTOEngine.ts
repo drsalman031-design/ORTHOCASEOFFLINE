@@ -106,28 +106,28 @@ export const calculateIncisorDifferences = (
   target: DesiredDentalObjective
 ): IncisorObjectiveDifferences => {
   const hasU1NaMm = typeof curr.u1NaMm === 'number' && !isNaN(curr.u1NaMm) && typeof target.u1NaMm === 'number' && !isNaN(target.u1NaMm);
-  const deltaU1NaMm = hasU1NaMm ? Number((target.u1NaMm! - curr.u1NaMm!).toFixed(1)) : 0;
+  const deltaU1NaMm = hasU1NaMm ? Number(((target.u1NaMm as number) - (curr.u1NaMm as number)).toFixed(1)) : 0;
 
   const hasU1NaDeg = typeof curr.u1NaDeg === 'number' && !isNaN(curr.u1NaDeg) && typeof target.u1NaDeg === 'number' && !isNaN(target.u1NaDeg);
-  const deltaU1NaDeg = hasU1NaDeg ? Number((target.u1NaDeg! - curr.u1NaDeg!).toFixed(1)) : 0;
+  const deltaU1NaDeg = hasU1NaDeg ? Number(((target.u1NaDeg as number) - (curr.u1NaDeg as number)).toFixed(1)) : 0;
 
   const hasU1SnDeg = typeof curr.u1SnDeg === 'number' && !isNaN(curr.u1SnDeg) && typeof target.u1SnDeg === 'number' && !isNaN(target.u1SnDeg);
-  const deltaU1SnDeg = hasU1SnDeg ? Number((target.u1SnDeg! - curr.u1SnDeg!).toFixed(1)) : 0;
+  const deltaU1SnDeg = hasU1SnDeg ? Number(((target.u1SnDeg as number) - (curr.u1SnDeg as number)).toFixed(1)) : 0;
 
   const hasImpaDeg = typeof curr.impaDeg === 'number' && !isNaN(curr.impaDeg) && typeof target.impaDeg === 'number' && !isNaN(target.impaDeg);
-  const deltaImpaDeg = hasImpaDeg ? Number((target.impaDeg! - curr.impaDeg!).toFixed(1)) : 0;
+  const deltaImpaDeg = hasImpaDeg ? Number(((target.impaDeg as number) - (curr.impaDeg as number)).toFixed(1)) : 0;
 
   const hasL1NbMm = typeof curr.l1NbMm === 'number' && !isNaN(curr.l1NbMm) && typeof target.l1NbMm === 'number' && !isNaN(target.l1NbMm);
-  const deltaL1NbMm = hasL1NbMm ? Number((target.l1NbMm! - curr.l1NbMm!).toFixed(1)) : 0;
+  const deltaL1NbMm = hasL1NbMm ? Number(((target.l1NbMm as number) - (curr.l1NbMm as number)).toFixed(1)) : 0;
 
   const hasL1NbDeg = typeof curr.l1NbDeg === 'number' && !isNaN(curr.l1NbDeg) && typeof target.l1NbDeg === 'number' && !isNaN(target.l1NbDeg);
-  const deltaL1NbDeg = hasL1NbDeg ? Number((target.l1NbDeg! - curr.l1NbDeg!).toFixed(1)) : 0;
+  const deltaL1NbDeg = hasL1NbDeg ? Number(((target.l1NbDeg as number) - (curr.l1NbDeg as number)).toFixed(1)) : 0;
 
   const hasOverjet = typeof curr.overjetMm === 'number' && !isNaN(curr.overjetMm) && typeof target.overjetMm === 'number' && !isNaN(target.overjetMm);
-  const deltaOverjetMm = hasOverjet ? Number((target.overjetMm! - curr.overjetMm!).toFixed(1)) : 0;
+  const deltaOverjetMm = hasOverjet ? Number(((target.overjetMm as number) - (curr.overjetMm as number)).toFixed(1)) : 0;
 
   const hasOverbite = typeof curr.overbiteMm === 'number' && !isNaN(curr.overbiteMm) && typeof target.overbiteMm === 'number' && !isNaN(target.overbiteMm);
-  const deltaOverbiteMm = hasOverbite ? Number((target.overbiteMm! - curr.overbiteMm!).toFixed(1)) : 0;
+  const deltaOverbiteMm = hasOverbite ? Number(((target.overbiteMm as number) - (curr.overbiteMm as number)).toFixed(1)) : 0;
 
   const u1Direction = deltaU1NaMm < -0.2 ? 'Retraction' : deltaU1NaMm > 0.2 ? 'Advancement' : 'Maintain';
   const l1Direction = deltaL1NbMm < -0.2 ? 'Retraction' : deltaL1NbMm > 0.2 ? 'Advancement' : 'Maintain';
